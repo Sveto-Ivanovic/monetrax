@@ -1,6 +1,7 @@
 package com.monetrax.monetrax.user.dto;
 
 import com.monetrax.monetrax.common.validaton.annotation.DateCorrectnessConstraint;
+import com.monetrax.monetrax.common.validaton.annotation.EmailCorrectnessConstraint;
 import com.monetrax.monetrax.common.validaton.annotation.PasswordFormatConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 @Builder
 public class UserCreation {
     @NotBlank(message = "userEmail must be present.")
+    @EmailCorrectnessConstraint
     private String userEmail;
 
     @NotBlank(message = "userName must be present.")

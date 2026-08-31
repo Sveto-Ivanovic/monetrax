@@ -1,6 +1,8 @@
 package com.monetrax.monetrax.user.service;
 
 import com.monetrax.monetrax.user.entity.UserEntity;
+import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
+import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -27,34 +29,68 @@ public class UserServiceImplTest {
     @InjectMocks
     private UserServiceImpl userService;
 
-    @Test
-    public void fetchUserByIdSuccessTest(){
+    private final UserEntity userEntityTest;
+
+    {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-
-        UserEntity userEntity=   UserEntity.builder()
-                .userId(UUID.randomUUID())
-                .userEmail("test.user@example.com")
-                .userName("testuser")
-                .name("Test")
-                .surname("User")
-                .role("USER")
-                .createdAt(now)
-                .updatedAt(now)
-                .dateOfBirth(LocalDate.of(1990, 1, 1))
-                .passwordHash("$2a$10$testPasswordHash")
-                .hasFinishedOnboarding(true)
-                .hasVerifiedEmail(true)
-                .lastLoggedIn(now)
-                .additionalInfo("Test user")
-                .build();
-
-
-        when(userRepository.findById(userEntity.getUserId())).thenReturn(Optional.of(userEntity));
-        UserEntity resUser = userService.fetchUserById(userEntity.getUserId());
-
-        assertNotNull(resUser);
-        assertEquals(userEntity, resUser);
-        verify(userRepository).findById(userEntity.getUserId());
+        userEntityTest =   UserEntity.builder()
+            .userId(UUID.randomUUID())
+            .userEmail("test.user@example.com")
+            .userName("testuser")
+            .name("Test")
+            .surname("User")
+            .role("USER")
+            .createdAt(now)
+            .updatedAt(now)
+            .dateOfBirth(LocalDate.of(1990, 1, 1))
+            .passwordHash("$2a$10$testPasswordHash")
+            .hasFinishedOnboarding(true)
+            .hasVerifiedEmail(true)
+            .lastLoggedIn(now)
+            .additionalInfo("Test user")
+            .build();
     }
 
-}
+    @Test
+    public void fetchUserByIdSuccessTest(){
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
+        UserEntity resUser = userService.fetchUserById(userEntityTest.getUserId());
+
+        assertNotNull(resUser);
+        assertEquals(userEntityTest, resUser);
+        verify(userRepository).findById(userEntityTest.getUserId());
+    }
+
+    @Test
+    public void fetchUserByIdNoSuchUserFailureTest(){
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.empty());
+        NoSuchUserExistsException exc = assertThrows(NoSuchUserExistsException.class, ()->{
+            userService.fetchUserById(userEntityTest.getUserId());
+        });
+        assertTrue(exc.msg.contains("No user with id: "+ userEntityTest.getUserId()));
+
+        verify(userRepository).findById(userEntityTest.getUserId());
+    }
+
+    @Test
+    public void createUserSuccessTest(){
+        when(userRepository.save(userEntityTest)).thenReturn(userEntityTest);
+        UserEntity res = userService.createUser(userEntityTest);
+
+        assertEquals(res, userEntityTest);
+        verify(userRepository).save(userEntityTest);
+    }
+
+    @Test
+    public void createUserEmailAlreadyExistsFailureTest(){
+        when(userRepository.existsUserEmail(userEntityTest.getUserEmail())).thenReturn(true);
+        EmailAlreadyExistsException exc = assertThrows(EmailAlreadyExistsException.class, ()->{
+            userService.createUser(userEntityTest);
+        });
+
+        assertEquals("Cannot create user as email already exists.",exc.msg);
+        verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
+    }
+
+
+    }
