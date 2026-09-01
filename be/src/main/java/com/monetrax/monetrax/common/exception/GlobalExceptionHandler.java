@@ -16,7 +16,7 @@ import java.util.*;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    public List<Map<String,Object>> addCustomErrorToErrorResponse(String err, String clueInfo){
+    public static List<Map<String,Object>> addCustomErrorToErrorResponse(String err, String clueInfo){
         Map<String,Object> error = new HashMap<>();
         error.put("clue",clueInfo);
         error.put("message", err);
