@@ -34,10 +34,11 @@ public class UserController {
 
     @PostMapping("/create")
     public ResponseEntity<UserInformation> createUser(@Valid @RequestBody UserCreation req){
-        String encoded_password = passwordEncoder.encode(req.getPassword());
-        UserEntity toCreateUser = userMapper.fromUserCreationToUserEntity(req, encoded_password);
-        UserEntity user = userService.createUser(toCreateUser);
-        return ResponseEntity.ok(userMapper.toUserInformation(user));
-    }
+        String encodedPassword = passwordEncoder.encode(req.getPassword());
+        UserEntity toCreateUser = userMapper.fromUserCreationToUserEntity(req, encodedPassword);
 
+        UserEntity user = userService.createUser(toCreateUser);
+        UserInformation info = userMapper.toUserInformation(user);
+        return ResponseEntity.ok(info);
+    }
 }

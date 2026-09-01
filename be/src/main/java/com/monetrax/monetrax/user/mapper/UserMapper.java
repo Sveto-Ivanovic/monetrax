@@ -12,6 +12,7 @@ public class UserMapper {
     public UserInformation toUserInformation(UserEntity user){
         return UserInformation
                 .builder()
+                .userId(user.getUserId())
                 .userEmail(user.getUserEmail())
                 .userName(user.getUserName())
                 .name(user.getName())

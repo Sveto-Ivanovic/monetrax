@@ -25,11 +25,11 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -90,13 +90,27 @@ public class UserControllerTest {
     }
 
     @Test
+    public void getUserMalformedPathTest() throws Exception{
+        UUID searchUUID = userEntityTest.getUserId();
+        String path = "/user/me/test123";
+        when(userService.fetchUserById(searchUUID)).thenReturn(userEntityTest);
+
+        String expectedResponse = """
+                {"errors":[{"clue":"param:user_id","message":"Method parameter 'user_id': Failed to convert value of type 'java.lang.String' to required type 'java.util.UUID'; Invalid UUID string: test123"}],"status":400}""";
+        mockMvc.perform(get(path))
+                .andExpect(content().json(expectedResponse))
+                .andExpect(status().isBadRequest());
+        verify(userService, never()).fetchUserById(any());
+    }
+
+    @Test
     public void getNonExistentUserFailureTest() throws Exception{
         UUID searchUUID = userEntityTest.getUserId();
         String path = "/user/me/"+searchUUID.toString();
         when(userService.fetchUserById(searchUUID)).thenThrow(new NoSuchUserExistsException("No user with id: "+ userEntityTest.getUserId()));
 
         String expectedResponse = """
-                        {"message":"No user with id: %s","statusCode":404}""".formatted(userEntityTest.getUserId());
+                        {"errors":[{"clue":"param:user_id", "message":"No user with id: %s"}],"status":404}""".formatted(userEntityTest.getUserId());
 
         mockMvc.perform(get(path))
                 .andExpect(status().isNotFound())
@@ -152,7 +166,7 @@ public class UserControllerTest {
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json("""
-                        {"message":"Cannot create user as email already exists.","statusCode":404}"""))
+                        {"errors": [{"message":"Cannot create user as email already exists.", "clue":"userEmail"}],"status":403}"""))
                 .andExpect(status().isForbidden());
 
         verify(userService).createUser(any(UserEntity.class));
@@ -179,8 +193,37 @@ public class UserControllerTest {
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json("""
-                        {"status":400,"errors":[{"field":"dateOfBirth","message":"The birth date must be in the past."},{"field":"dateOfBirth","message":"User has to be at least 18 years old."},{"field":"userEmail","message":"Invalid email format."},{"field":"password","message":"Invalid Password format, password must contain at least 1 uppercase, lowercase, number and symbol."}]}"""))
+                        {"status":400,"errors":[{"clue":"dateOfBirth","message":"The birth date must be in the past."},{"clue":"dateOfBirth","message":"User has to be at least 18 years old."},{"clue":"userEmail","message":"Invalid email format."},{"clue":"password","message":"Invalid Password format, password must contain at least 1 uppercase, lowercase, number and symbol."}]}"""))
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    public void createUserMissingRequestParameterFailureTest() throws Exception{
+        String path = "/user/create";
+        UserCreation userCreationTest = UserCreation.builder()
+                .userEmail("correct@email.com")
+                .userName("NA")
+                .dateOfBirth(LocalDate.of(2000, 1, 1))
+                .password("TestPassword123.")
+                .build();
+
+        String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest);
+
+        mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
+                .andExpect(content().json("""
+                        {"errors":[{"message":"surname must be present.","clue":"surname"},{"message":"name must be present.","clue":"name"}],"status":400}"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void createUserWrongParameterTypeConversionFailureTest() throws Exception{
+        String path = "/user/create";
+
+        mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("""
+                        {"userEmail":"correct@email.com","userName":"Username","surname":"heter", "name":55, "dateOfBirth":"hello","password":"TestPassword123."}"""))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"InvalidParamType","message":"JSON parse error: Cannot deserialize value of type `java.time.LocalDate` from String \\"hello\\": Failed to deserialize `java.time.LocalDate` (with format 'Value(Year,4,10,EXCEEDS_PAD)'-'Value(MonthOfYear,2)'-'Value(DayOfMonth,2)'): (java.time.format.DateTimeParseException) Text 'hello' could not be parsed at index 0"}],"status":400}"""))
+                .andExpect(status().isBadRequest())
+                .andDo(print());
+    }
 }
