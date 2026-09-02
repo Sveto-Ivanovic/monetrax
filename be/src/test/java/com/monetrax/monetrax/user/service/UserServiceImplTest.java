@@ -1,9 +1,12 @@
 package com.monetrax.monetrax.user.service;
 
+import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.user.dto.UserCreation;
 import com.monetrax.monetrax.user.dto.UserInformation;
+import com.monetrax.monetrax.user.dto.UserUpdate;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
+import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.mapper.UserMapper;
 import com.monetrax.monetrax.user.repository.UserRepository;
@@ -137,5 +140,93 @@ public class UserServiceImplTest {
         verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
     }
 
+    @Test
+    public void updateUserSuccessTest(){
+        UserUpdate userUpdate = UserUpdate.builder()
+                .userEmail("updated.user@example.com")
+                .userName("updateduser")
+                .name("Updated")
+                .surname("Person")
+                .dateOfBirth(LocalDate.of(1992, 5, 15))
+                .build();
+
+
+        UserEntity updatedUserEntity = UserEntity.builder()
+                .userId(userEntityTest.getUserId())
+                .userEmail(userUpdate.getUserEmail())
+                .userName(userUpdate.getUserName())
+                .name(userUpdate.getName())
+                .surname(userUpdate.getSurname())
+                .role(userEntityTest.getRole())
+                .createdAt(userEntityTest.getCreatedAt())
+                .updatedAt(userEntityTest.getUpdatedAt())
+                .dateOfBirth(userUpdate.getDateOfBirth())
+                .passwordHash(userEntityTest.getPasswordHash())
+                .hasFinishedOnboarding(userEntityTest.isHasFinishedOnboarding())
+                .hasVerifiedEmail(userEntityTest.isHasVerifiedEmail())
+                .lastLoggedIn(userEntityTest.getLastLoggedIn())
+                .additionalInfo(userEntityTest.getAdditionalInfo())
+                .build();
+
+        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(false);
+        when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
+        when(userRepository.save(updatedUserEntity)).thenReturn(updatedUserEntity);
+
+        UserInformation res = userService.updateUser(userUpdate, userEntityTest.getUserId());
+
+        assertNotNull(res);
+        assertEquals(userInformationTest, res);
+
+        verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
+        verify(userRepository).findById(userEntityTest.getUserId());
+        verify(userRepository).save(updatedUserEntity);
+    }
+
+
+    @Test
+    public void updateUserEmailAlreadyExistsFailureTest() {
+        UserUpdate userUpdate = UserUpdate.builder()
+                .userEmail("updated.user@example.com")
+                .userName("updateduser")
+                .name("Updated")
+                .surname("Person")
+                .dateOfBirth(LocalDate.of(1992, 5, 15))
+                .build();
+
+        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(true);
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
+
+        assertThrows(EmailAlreadyExistsException.class, ()->{
+            userService.updateUser(userUpdate, userEntityTest.getUserId());
+        });
+    }
+
+    @Test
+    public void updateUserThatUserDoesNotExistFailureTest() {
+        UserUpdate userUpdate = UserUpdate.builder()
+                .userEmail("updated.user@example.com")
+                .userName("updateduser")
+                .name("Updated")
+                .surname("Person")
+                .dateOfBirth(LocalDate.of(1992, 5, 15))
+                .build();
+
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchUserExistsException.class, ()->{
+            userService.updateUser(userUpdate, userEntityTest.getUserId());
+        });
+    }
+
+    @Test
+    public void updateUserWithNoNewValuesToUpdateFailureTest() {
+        UserUpdate userUpdate = UserUpdate.builder()
+                .build();
+
+        assertThrows(NoFieldToUpdateUserExistsException.class, ()->{
+            userService.updateUser(userUpdate, userEntityTest.getUserId());
+        });
+    }
 
     }
