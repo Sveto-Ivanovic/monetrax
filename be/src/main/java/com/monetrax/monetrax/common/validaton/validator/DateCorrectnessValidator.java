@@ -30,7 +30,7 @@ public class DateCorrectnessValidator implements ConstraintValidator<DateCorrect
     public boolean isValid(LocalDate localDate, ConstraintValidatorContext ctx) {
         LocalDate localDateNow = LocalDate.now();
         long diff;
-        return switch(filter){
+        return localDate == null || switch(filter){
             case YEARS -> {
                 diff = ChronoUnit.YEARS.between(localDate, localDateNow);
                 yield  calcValidity(diff, value);

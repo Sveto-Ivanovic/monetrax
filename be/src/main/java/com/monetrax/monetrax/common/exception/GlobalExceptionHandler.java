@@ -1,7 +1,9 @@
 package com.monetrax.monetrax.common.exception;
 
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
+import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
+import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -30,6 +32,20 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNoSuchUserExistsException(NoSuchUserExistsException err){
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(err.getMessage(), "param:user_id"));
+    }
+
+    // exception for when we want to update user but we didn't provide any field to update
+    @ExceptionHandler(value = NoFieldToUpdateUserExistsException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleNoFieldToUpdateUserExistsException(NoFieldToUpdateUserExistsException err){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(err.getMessage(), "insertFieldInRequest"));
+    }
+
+    // exception for when we want to update user but we didn't provide any field to update
+     @ExceptionHandler(value = PasswordMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handlePasswordMismatchException(PasswordMismatchException err){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(err.getMessage(), "incorrectPassword"));
     }
 
     // exception for when we are creating user in the db, but email already exists

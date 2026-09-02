@@ -1,8 +1,11 @@
 package com.monetrax.monetrax.user.service;
 
+import com.monetrax.monetrax.user.dto.UserCreation;
+import com.monetrax.monetrax.user.dto.UserInformation;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
+import com.monetrax.monetrax.user.mapper.UserMapper;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -10,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -26,14 +30,23 @@ public class UserServiceImplTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private UserMapper userMapper;
+
     @InjectMocks
     private UserServiceImpl userService;
 
     private final UserEntity userEntityTest;
+    private final UserInformation userInformationTest;
+    private final UserCreation userCreationTest;
+
 
     {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-        userEntityTest =   UserEntity.builder()
+        userEntityTest = UserEntity.builder()
             .userId(UUID.randomUUID())
             .userEmail("test.user@example.com")
             .userName("testuser")
@@ -49,16 +62,42 @@ public class UserServiceImplTest {
             .lastLoggedIn(now)
             .additionalInfo("Test user")
             .build();
+
+        userInformationTest = UserInformation.builder()
+                .userId(UUID.randomUUID())
+                .userEmail("test.user@example.com")
+                .userName("testuser")
+                .name("Test")
+                .surname("User")
+                .role("USER")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .hasFinishedOnboarding(true)
+                .hasVerifiedEmail(true)
+                .additionalInfo("Test user")
+                .build();
+
+        userCreationTest = UserCreation.builder()
+                .userEmail("test.user@example.com")
+                .userName("testuser")
+                .name("Test")
+                .surname("User")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .password("testPassword123!")
+                .build();
+
     }
 
     @Test
     public void fetchUserByIdSuccessTest(){
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
-        UserEntity resUser = userService.fetchUserById(userEntityTest.getUserId());
+        when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
+
+        UserInformation resUser = userService.fetchUserById(userEntityTest.getUserId());
 
         assertNotNull(resUser);
-        assertEquals(userEntityTest, resUser);
+        assertEquals(userInformationTest, resUser);
         verify(userRepository).findById(userEntityTest.getUserId());
+        verify(userMapper).toUserInformation(userEntityTest);
     }
 
     @Test
@@ -75,17 +114,23 @@ public class UserServiceImplTest {
     @Test
     public void createUserSuccessTest(){
         when(userRepository.save(userEntityTest)).thenReturn(userEntityTest);
-        UserEntity res = userService.createUser(userEntityTest);
+        when(userMapper.fromUserCreationToUserEntity(userCreationTest, "$2a$10$testPasswordHash")).thenReturn(userEntityTest);
+        when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
+        when(passwordEncoder.encode("testPassword123!")).thenReturn("$2a$10$testPasswordHash");
+        UserInformation res = userService.createUser(userCreationTest);
 
-        assertEquals(res, userEntityTest);
+        assertEquals(res, userInformationTest);
         verify(userRepository).save(userEntityTest);
+        verify(passwordEncoder).encode("testPassword123!");
+        verify(userMapper).fromUserCreationToUserEntity(userCreationTest, "$2a$10$testPasswordHash");
+        verify(userMapper).toUserInformation(userEntityTest);
     }
 
     @Test
     public void createUserEmailAlreadyExistsFailureTest(){
         when(userRepository.existsUserEmail(userEntityTest.getUserEmail())).thenReturn(true);
         EmailAlreadyExistsException exc = assertThrows(EmailAlreadyExistsException.class, ()->{
-            userService.createUser(userEntityTest);
+            userService.createUser(userCreationTest);
         });
 
         assertEquals("Cannot create user as email already exists.",exc.msg);

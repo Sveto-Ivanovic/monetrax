@@ -13,6 +13,6 @@ public class EmailCorrectnessValidator implements ConstraintValidator<EmailCorre
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext ctx){
-        return value != null && EMAIL_PATTERN.matcher(value).matches();
+        return value == null || EMAIL_PATTERN.matcher(value).matches();
     }
 }

@@ -53,6 +53,8 @@ public class UserControllerTest {
     private PasswordEncoder passwordEncoder;
 
     private final UserEntity userEntityTest;
+    private final UserInformation userInformationTest;
+    private final UserCreation userCreationTest;
 
     {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -72,16 +74,37 @@ public class UserControllerTest {
                 .lastLoggedIn(now)
                 .additionalInfo("Test user")
                 .build();
+
+        userInformationTest = UserInformation.builder()
+                .userId(UUID.randomUUID())
+                .userEmail("test.user@example.com")
+                .userName("testuser")
+                .name("Test")
+                .surname("User")
+                .role("USER")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .hasFinishedOnboarding(true)
+                .hasVerifiedEmail(true)
+                .additionalInfo("Test user")
+                .build();
+
+        userCreationTest = UserCreation.builder()
+                .userEmail("test.user@example.com")
+                .userName("testuser")
+                .name("Test")
+                .surname("User")
+                .dateOfBirth(LocalDate.of(1990, 1, 1))
+                .password("testPassword123!")
+                .build();
     }
 
     @Test
     public void getUserSuccessTest() throws Exception{
         UUID searchUUID = userEntityTest.getUserId();
         String path = "/user/me/"+searchUUID.toString();
-        when(userService.fetchUserById(searchUUID)).thenReturn(userEntityTest);
+        when(userService.fetchUserById(searchUUID)).thenReturn(userInformationTest);
 
-        UserInformation userInformation = userMapper.toUserInformation(userEntityTest);
-        String userInformationJsonString = objectMapper.writeValueAsString(userInformation);
+        String userInformationJsonString = objectMapper.writeValueAsString(userInformationTest);
         mockMvc.perform(get(path))
                 .andExpect(status().isOk())
                 .andExpect(content().json(userInformationJsonString));
@@ -93,7 +116,7 @@ public class UserControllerTest {
     public void getUserMalformedPathTest() throws Exception{
         UUID searchUUID = userEntityTest.getUserId();
         String path = "/user/me/test123";
-        when(userService.fetchUserById(searchUUID)).thenReturn(userEntityTest);
+        when(userService.fetchUserById(searchUUID)).thenReturn(userInformationTest);
 
         String expectedResponse = """
                 {"errors":[{"clue":"param:user_id","message":"Method parameter 'user_id': Failed to convert value of type 'java.lang.String' to required type 'java.util.UUID'; Invalid UUID string: test123"}],"status":400}""";
@@ -122,61 +145,39 @@ public class UserControllerTest {
     @Test
     public void createUserSuccessTest() throws Exception{
         String path = "/user/create";
-        UserCreation userCreationTest = UserCreation.builder()
-                .userEmail(userEntityTest.getUserEmail())
-                .userName(userEntityTest.getUserName())
-                .name(userEntityTest.getName())
-                .surname(userEntityTest.getSurname())
-                .dateOfBirth(userEntityTest.getDateOfBirth())
-                .password("TestPassword123!")
-                .build();
 
-        String encoded_password = passwordEncoder.encode(userCreationTest.getPassword());
-
-        UserEntity userEntity = userMapper.fromUserCreationToUserEntity(userCreationTest, encoded_password);
-        UserInformation userInformation =userMapper.toUserInformation(userEntity);
-
-        String userInformationJSONString = objectMapper.writeValueAsString(userInformation);
+        String userInformationJSONString = objectMapper.writeValueAsString(userInformationTest);
         String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest);
 
-        when(userService.createUser(any(UserEntity.class))).thenReturn(userEntity);
+        when(userService.createUser(userCreationTest)).thenReturn(userInformationTest);
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json(userInformationJSONString))
                 .andExpect(status().isOk());
 
-        verify(userService).createUser(any(UserEntity.class));
+        verify(userService).createUser(userCreationTest);
     }
 
     @Test
     public void createUserDuplicateEmailFailureTest() throws Exception{
         String path = "/user/create";
-        UserCreation userCreationTest = UserCreation.builder()
-                .userEmail(userEntityTest.getUserEmail())
-                .userName(userEntityTest.getUserName())
-                .name(userEntityTest.getName())
-                .surname(userEntityTest.getSurname())
-                .dateOfBirth(userEntityTest.getDateOfBirth())
-                .password("TestPassword123!")
-                .build();
-
         String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest);
 
-        when(userService.createUser(any(UserEntity.class))).thenThrow(new EmailAlreadyExistsException("Cannot create user as email already exists."));
+        when(userService.createUser(userCreationTest)).thenThrow(new EmailAlreadyExistsException("Cannot create user as email already exists."));
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json("""
                         {"errors": [{"message":"Cannot create user as email already exists.", "clue":"userEmail"}],"status":403}"""))
                 .andExpect(status().isForbidden());
 
-        verify(userService).createUser(any(UserEntity.class));
+        verify(userService).createUser(userCreationTest);
     }
 
 
     @Test
     public void createUserMultiValidationFailureTest() throws Exception{
         String path = "/user/create";
-        UserCreation userCreationTest = UserCreation.builder()
+        UserCreation userCreationTest1 = UserCreation.builder()
                 .userEmail("incorr.ect@emailformat")
                 .userName("NA")
                 .name("NA")
@@ -185,11 +186,7 @@ public class UserControllerTest {
                 .password("TestPassword123")
                 .build();
 
-        String encoded_password = passwordEncoder.encode(userCreationTest.getPassword());
-
-        UserEntity userEntity = userMapper.fromUserCreationToUserEntity(userCreationTest, encoded_password);
-
-        String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest);
+        String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest1);
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json("""
@@ -200,14 +197,14 @@ public class UserControllerTest {
     @Test
     public void createUserMissingRequestParameterFailureTest() throws Exception{
         String path = "/user/create";
-        UserCreation userCreationTest = UserCreation.builder()
+        UserCreation userCreationTest1 = UserCreation.builder()
                 .userEmail("correct@email.com")
                 .userName("NA")
                 .dateOfBirth(LocalDate.of(2000, 1, 1))
                 .password("TestPassword123.")
                 .build();
 
-        String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest);
+        String userCreationJSONString = objectMapper.writeValueAsString(userCreationTest1);
 
         mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(userCreationJSONString))
                 .andExpect(content().json("""
