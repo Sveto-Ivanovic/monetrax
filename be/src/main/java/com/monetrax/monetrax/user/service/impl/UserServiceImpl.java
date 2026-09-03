@@ -92,6 +92,7 @@ public class UserServiceImpl implements UserService {
             throw new PasswordMismatchException("The new password must not be equal to the old one.");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
         return new UserSuccessfulPasswordUpdate(true);
     }
 

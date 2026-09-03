@@ -1,11 +1,12 @@
 package com.monetrax.monetrax.user.controller;
 
 import com.monetrax.monetrax.config.SecurityConfig;
-import com.monetrax.monetrax.user.dto.UserCreation;
-import com.monetrax.monetrax.user.dto.UserInformation;
+import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
+import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
+import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import com.monetrax.monetrax.user.mapper.UserMapper;
 import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,8 +29,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,12 +46,6 @@ public class UserControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
 
     private final UserEntity userEntityTest;
     private final UserInformation userInformationTest;
@@ -223,4 +218,170 @@ public class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andDo(print());
     }
+
+    @Test
+    public void updateUserSuccessTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId();
+
+        UserUpdate userUpdate = UserUpdate.builder()
+                .userEmail("updated.user@example.com")
+                .userName("updateduser")
+                .name("Updated")
+                .surname("Person")
+                .dateOfBirth(LocalDate.of(1992, 5, 15))
+                .build();
+
+        UserInformation userInformation = UserInformation.builder()
+                .userId(userEntityTest.getUserId())
+                .userEmail(userUpdate.getUserEmail())
+                .userName(userUpdate.getUserName())
+                .name(userUpdate.getName())
+                .surname(userUpdate.getSurname())
+                .role(userEntityTest.getRole())
+                .dateOfBirth(userUpdate.getDateOfBirth())
+                .hasFinishedOnboarding(userEntityTest.isHasFinishedOnboarding())
+                .hasVerifiedEmail(userEntityTest.isHasVerifiedEmail())
+                .additionalInfo(userEntityTest.getAdditionalInfo())
+                .build();
+
+        String userUpdateString = objectMapper.writeValueAsString(userUpdate);
+        String userUpdatedEntityString = objectMapper.writeValueAsString(userInformation);
+
+        when(userService.updateUser(userUpdate, userEntityTest.getUserId())).thenReturn(userInformation);
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdateString))
+                .andExpect(content().json(userUpdatedEntityString))
+                .andExpect(status().isOk());
+    }
+
+
+    @Test
+    public void updateUserNoFieldsToUpdateFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId();
+
+        UserUpdate userUpdate = UserUpdate.builder()
+                .build();
+        String userUpdateString = objectMapper.writeValueAsString(userUpdate);
+
+        when(userService.updateUser(userUpdate, userEntityTest.getUserId())).thenThrow(new NoFieldToUpdateUserExistsException("Nothing to update user with."));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdateString))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"insertFieldInRequest","message":"Nothing to update user with."}],"status":400}"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void updateUserWithEmailAlreadyPresentInDBFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId();
+
+        UserUpdate userUpdate = UserUpdate.builder()
+                .build();
+        String userUpdateString = objectMapper.writeValueAsString(userUpdate);
+
+        when(userService.updateUser(userUpdate, userEntityTest.getUserId())).thenThrow(new EmailAlreadyExistsException("Cannot update user with present email as the email already exists."));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdateString))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"userEmail","message":"Cannot update user with present email as the email already exists."}],"status":403}"""))
+                .andExpect(status().isForbidden());
+    }
+
+
+    @Test
+    public void updateUserButUserDoesNotExistFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId();
+
+        UserUpdate userUpdate = UserUpdate.builder()
+                .build();
+        String userUpdateString = objectMapper.writeValueAsString(userUpdate);
+
+        when(userService.updateUser(userUpdate, userEntityTest.getUserId())).thenThrow(new NoSuchUserExistsException("No user with id: "+ userEntityTest.getUserId()));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdateString))
+                .andExpect(content().json("""
+                       {"errors":[{"clue":"param:user_id","message":"No user with id: %s"}],"status":404}""".formatted(userEntityTest.getUserId())))
+                .andExpect(status().isNotFound());
+    }
+
+
+
+    @Test
+    public void updatePasswordSuccessTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId()+"/password";
+
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .oldPassword("testPassword123!")
+                .newPassword("testPassword123456!")
+                .build();
+
+        UserSuccessfulPasswordUpdate respExp = new UserSuccessfulPasswordUpdate(true);
+        String userUpdatePasswordString = objectMapper.writeValueAsString(userUpdatePassword);
+        String userUpdatedPasswordSuccessResponse = objectMapper.writeValueAsString(respExp);
+
+        when(userService.updatePassword(userUpdatePassword.getNewPassword(), userUpdatePassword.getOldPassword(), userEntityTest.getUserId())).thenReturn(respExp);
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdatePasswordString))
+                .andExpect(content().json(userUpdatedPasswordSuccessResponse))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void updatePasswordButNewAndOldPasswordsAreSameFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId()+"/password";
+
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .oldPassword("testPassword123!")
+                .newPassword("testPassword123!")
+                .build();
+
+        String userUpdatePasswordString = objectMapper.writeValueAsString(userUpdatePassword);
+
+        when(userService.updatePassword(userUpdatePassword.getNewPassword(), userUpdatePassword.getOldPassword(), userEntityTest.getUserId())).thenThrow(new PasswordMismatchException("The provided old password is not equal to the one provided in database."));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdatePasswordString))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"incorrectPassword","message":"The provided old password is not equal to the one provided in database."}],"status":400}"""))
+                .andExpect(status().isBadRequest());
+    }
+
+
+    @Test
+    public void updatePasswordButProvidedPasswordIsIncorrectFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId()+"/password";
+
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .oldPassword("testPassword123456!")
+                .newPassword("testPassword1234567!")
+                .build();
+
+        String userUpdatePasswordString = objectMapper.writeValueAsString(userUpdatePassword);
+
+        when(userService.updatePassword(userUpdatePassword.getNewPassword(), userUpdatePassword.getOldPassword(), userEntityTest.getUserId())).thenThrow(new PasswordMismatchException("The new password must not be equal to the old one."));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdatePasswordString))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"incorrectPassword","message":"The new password must not be equal to the old one."}],"status":400}"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void updatePasswordButUserDoesNotExistFailureTest() throws Exception{
+        String path = "/user/update/"+userEntityTest.getUserId()+"/password";
+
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .oldPassword("testPassword123456!")
+                .newPassword("testPassword1234567!")
+                .build();
+
+        String userUpdatePasswordString = objectMapper.writeValueAsString(userUpdatePassword);
+
+        when(userService.updatePassword(userUpdatePassword.getNewPassword(), userUpdatePassword.getOldPassword(), userEntityTest.getUserId())).thenThrow(new NoSuchUserExistsException("No user with id: "+ userEntityTest.getUserId()));
+
+        mockMvc.perform(patch(path).contentType(MediaType.APPLICATION_JSON).content(userUpdatePasswordString))
+                .andExpect(content().json("""
+                        {"errors":[{"clue":"param:user_id","message":"No user with id: %s"}],"status":404}""".formatted(userEntityTest.getUserId())))
+                .andExpect(status().isNotFound());
+    }
+
 }

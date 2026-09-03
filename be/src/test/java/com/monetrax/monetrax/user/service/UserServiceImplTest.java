@@ -1,16 +1,16 @@
 package com.monetrax.monetrax.user.service;
 
 import com.monetrax.monetrax.common.exception.ErrorResponse;
-import com.monetrax.monetrax.user.dto.UserCreation;
-import com.monetrax.monetrax.user.dto.UserInformation;
-import com.monetrax.monetrax.user.dto.UserUpdate;
+import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
 import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
+import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import com.monetrax.monetrax.user.mapper.UserMapper;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
+import com.monetrax.monetrax.user.dto.UserSuccessfulPasswordUpdate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -226,6 +226,85 @@ public class UserServiceImplTest {
 
         assertThrows(NoFieldToUpdateUserExistsException.class, ()->{
             userService.updateUser(userUpdate, userEntityTest.getUserId());
+        });
+    }
+
+    @Test void updatePasswordSuccessTest(){
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .newPassword("testPassword123456!")
+                .oldPassword("testPassword123!")
+                .build();
+
+        UserEntity userEntityFetched = userEntityTest.toBuilder().build();
+
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityFetched));
+        when(passwordEncoder.matches(userUpdatePassword.getOldPassword(), userEntityTest.getPasswordHash())).thenReturn(true);
+        when(passwordEncoder.matches(userUpdatePassword.getNewPassword(), userEntityTest.getPasswordHash())).thenReturn(false);
+        when(passwordEncoder.encode(userUpdatePassword.getNewPassword())).thenReturn("$2a$10$testPasswordHash2");
+        UserEntity copyOfUser = userEntityTest.toBuilder()
+                        .passwordHash("$2a$10$testPasswordHash2")
+                        .build();
+        when(userRepository.save(copyOfUser)).thenReturn(copyOfUser);
+
+        UserSuccessfulPasswordUpdate expectedResponse = new UserSuccessfulPasswordUpdate(true);
+        UserSuccessfulPasswordUpdate userUpdatePasswordResponse = userService.updatePassword(userUpdatePassword.getNewPassword(),userUpdatePassword.getOldPassword(), userEntityTest.getUserId());
+
+        assertNotNull(userUpdatePasswordResponse);
+        assertEquals(expectedResponse, userUpdatePasswordResponse);
+        assertTrue(userUpdatePasswordResponse.isSuccessfulPasswordUpdate());
+
+        verify(userRepository).findById(userEntityTest.getUserId());
+        verify(passwordEncoder).matches(userUpdatePassword.getOldPassword(), userEntityTest.getPasswordHash());
+        verify(passwordEncoder).matches(userUpdatePassword.getNewPassword(), userEntityTest.getPasswordHash());
+        verify(passwordEncoder).encode(userUpdatePassword.getNewPassword());
+        verify(userRepository).save(copyOfUser);
+    }
+
+    @Test void updatePasswordNewOldPasswordMatchFailureTest(){
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .newPassword("testPassword123456!")
+                .oldPassword("testPassword123!")
+                .build();
+
+        UserEntity userEntityFetched = userEntityTest.toBuilder().build();
+
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityFetched));
+        when(passwordEncoder.matches(userUpdatePassword.getOldPassword(), userEntityTest.getPasswordHash())).thenReturn(true);
+        when(passwordEncoder.matches(userUpdatePassword.getNewPassword(), userEntityTest.getPasswordHash())).thenReturn(true);
+
+        assertThrows(PasswordMismatchException.class, ()->{
+            userService.updatePassword(userUpdatePassword.getNewPassword(),userUpdatePassword.getOldPassword(), userEntityTest.getUserId());
+        });
+    }
+
+    @Test void updatePasswordIncorrectCurrentFailureTest(){
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .newPassword("testPassword123456!")
+                .oldPassword("testPassword123!")
+                .build();
+
+        UserEntity userEntityFetched = userEntityTest.toBuilder().build();
+
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityFetched));
+        when(passwordEncoder.matches(userUpdatePassword.getOldPassword(), userEntityTest.getPasswordHash())).thenReturn(false);
+
+        assertThrows(PasswordMismatchException.class, ()->{
+            userService.updatePassword(userUpdatePassword.getNewPassword(),userUpdatePassword.getOldPassword(), userEntityTest.getUserId());
+        });
+    }
+
+    @Test void updatePasswordForNonExistentUserFailureTest(){
+        UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
+                .newPassword("testPassword123456!")
+                .oldPassword("testPassword123!")
+                .build();
+
+        UserEntity userEntityFetched = userEntityTest.toBuilder().build();
+
+        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.empty());
+
+        assertThrows(NoSuchUserExistsException.class, ()->{
+            userService.updatePassword(userUpdatePassword.getNewPassword(),userUpdatePassword.getOldPassword(), userEntityTest.getUserId());
         });
     }
 
