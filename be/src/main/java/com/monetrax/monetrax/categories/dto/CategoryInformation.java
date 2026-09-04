@@ -20,5 +20,5 @@ public class CategoryInformation {
     private CategoryKind categoryType;
     private String name;
     private String description;
-    private boolean isDefault;
+    private boolean defaultCategory;
 }

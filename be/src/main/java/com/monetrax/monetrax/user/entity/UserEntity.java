@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -59,7 +61,8 @@ public class UserEntity {
     @Column(name = "last_logged_in", nullable = true)
     private OffsetDateTime lastLoggedIn;
 
-    @Column(name = "additional_info")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json", name = "additional_info")
     private String additionalInfo;
 
 }

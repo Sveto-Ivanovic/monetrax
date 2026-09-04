@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.categories.entity;
 
+import com.monetrax.monetrax.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,8 +23,9 @@ public class CategoryEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID categoryId;
 
-    @Column(name = "user_id")
-    private UUID userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category_type")
@@ -42,6 +44,6 @@ public class CategoryEntity {
     private OffsetDateTime updatedAt;
 
     @Column(name = "is_default")
-    private boolean isDefault;
+    private boolean defaultCategory;
 }
 

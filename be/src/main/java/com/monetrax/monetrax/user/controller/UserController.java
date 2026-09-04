@@ -17,9 +17,6 @@ import java.util.UUID;
 public class UserController {
 
     @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
     private UserService userService;
 
     @GetMapping("/me/{user_id}")

@@ -1,5 +1,7 @@
 package com.monetrax.monetrax.common.exception;
 
+import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
+import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
 import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
@@ -53,6 +55,20 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleEmailAlreadyExistsException(EmailAlreadyExistsException err){
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(err.getMessage(), "userEmail"));
+    }
+
+    // exception specific to categories api when we do not have any field to update and yet we call the endpoint
+    @ExceptionHandler(value = MissingFieldsForCategoryUpdate.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMissingFieldsForCategoryUpdate(MissingFieldsForCategoryUpdate err){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(err.getMessage(), "insertFieldInRequest"));
+    }
+
+    // exception specific to categories api when either the user_id or category_id is wrong
+    @ExceptionHandler(value = NoSuchCategoryExistsException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleNoSuchCategoryExistsException(NoSuchCategoryExistsException err){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(err.getMessage(), "category_idORuser_id"));
     }
 
     // validator for dto's exception
