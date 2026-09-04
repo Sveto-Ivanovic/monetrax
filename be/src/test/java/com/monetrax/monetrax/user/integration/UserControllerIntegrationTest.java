@@ -4,6 +4,7 @@ import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
 import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,9 +33,10 @@ public class UserControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+
     @AfterEach
     void cleanChanges(){
-        userRepository.deleteAll();
+        userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 
     private UserCreation userCreation = UserCreation.builder()

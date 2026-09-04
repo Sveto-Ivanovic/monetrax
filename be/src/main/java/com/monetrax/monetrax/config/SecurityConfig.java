@@ -15,7 +15,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws  Exception{
         http.csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-        .authorizeHttpRequests(authorize -> authorize.requestMatchers("/", "/error", "/user/**", "/h2-console/**")
+        .authorizeHttpRequests(authorize -> authorize.requestMatchers("/", "/error", "/user/**", "/categories/**", "/h2-console/**")
                 .permitAll()
                 .anyRequest()
                 .authenticated()).formLogin(Customizer.withDefaults());
