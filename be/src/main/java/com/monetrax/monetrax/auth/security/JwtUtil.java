@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.auth.security;
 
+import com.monetrax.monetrax.auth.dto.AuthInfo;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -42,7 +43,7 @@ public class JwtUtil {
     }
 
 
-    public UUID getUserIdFromToken(String token) {
+    public AuthInfo getAuthInfoFromToken(String token) {
         Claims claims;
         try {
             claims = Jwts.parser()
@@ -51,19 +52,27 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (JwtException e) {
-            throw new JwtAuthenticationException("Invalid or expired token");
+            throw new JwtAuthenticationException("Invalid or expired token.");
         }
 
         String uuidString = claims.get("userId", String.class);
-        if (uuidString == null) {
-            throw new JwtAuthenticationException("Token missing userId claim");
+        String type = claims.get("type", String.class);
+        String email = claims.getSubject();
+        if (uuidString == null || type == null || email == null) {
+            throw new JwtAuthenticationException("Token missing userId, type or email claim.");
         }
 
         try {
-            return UUID.fromString(uuidString);
+            return AuthInfo.builder()
+                    .userId(UUID.fromString(uuidString))
+                    .email(email)
+                    .type(type)
+                    .build();
         } catch (IllegalArgumentException e) {
             throw new JwtAuthenticationException("Invalid userId format in token");
         }
+
+
     }
 
 
