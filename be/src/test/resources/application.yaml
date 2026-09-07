@@ -10,3 +10,6 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     locations: classpath:db-migration-h2
+jwt:
+  secret: xIzd1FTr25wQNeoK6sdcvajx5HUmtzFSdI8Lft7nlDlg28MfdcGZJp7752bOIYRj
+  expiration: 3600000
