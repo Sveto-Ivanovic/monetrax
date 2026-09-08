@@ -10,6 +10,8 @@ import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.*;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -116,5 +118,75 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleJwtAuthenticationException(JwtAuthenticationException ex){
         return new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), addCustomErrorToErrorResponse(ex.getMessage(), "UnauthorizedOrInvalidBearer"));
     }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleAuthenticationException(AuthenticationException ex){
+        return new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), addCustomErrorToErrorResponse(ex.getMessage(), "UnauthorizedOrInvalidBearer"));
+    }
+
+
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleBadCredentialsException(BadCredentialsException ex) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                addCustomErrorToErrorResponse(
+                        ex.getMessage(),
+                        "BadCredentials"
+                )
+        );
+    }
+
+    @ExceptionHandler(DisabledException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleDisabledException(DisabledException ex) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                addCustomErrorToErrorResponse(
+                        ex.getMessage(),
+                        "UnverifiedEmail"
+                )
+        );
+    }
+
+    @ExceptionHandler(LockedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleLockedException(LockedException ex) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                addCustomErrorToErrorResponse(
+                        ex.getMessage(),
+                        "AccountLocked"
+                )
+        );
+    }
+
+    @ExceptionHandler(CredentialsExpiredException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleCredentialsExpiredException(CredentialsExpiredException ex) {
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                addCustomErrorToErrorResponse(
+                        ex.getMessage(),
+                        "CredentialsExpired"
+                )
+        );
+    }
+
+    @ExceptionHandler(InsufficientAuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleInsufficientAuthenticationException(
+            InsufficientAuthenticationException ex) {
+
+        return new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                addCustomErrorToErrorResponse(
+                        ex.getMessage(),
+                        "InsufficientAuthentication"
+                )
+        );
+    }
+
 
 }

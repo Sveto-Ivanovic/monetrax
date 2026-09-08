@@ -29,7 +29,7 @@ public class AuthService {
         Authentication authentication = authenticationManager.authenticate(token);
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
         assert customUserDetails != null;
-        String authToken = jwtService.generateToken(customUserDetails.getUserId(), UUID.fromString(customUserDetails.getUserId()));
+        String authToken = jwtService.generateToken(customUserDetails.getUsername(), UUID.fromString(customUserDetails.getUserId()));
         return AuthResponse.builder()
                 .authToken(authToken)
                 .userId(customUserDetails.getUserId())
