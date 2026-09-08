@@ -1,5 +1,7 @@
 package com.monetrax.monetrax.user.controller;
 
+import com.monetrax.monetrax.auth.service.CustomUserDetailsService;
+import com.monetrax.monetrax.auth.service.JwtService;
 import com.monetrax.monetrax.config.SecurityConfig;
 import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
@@ -8,6 +10,7 @@ import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import com.monetrax.monetrax.user.mapper.UserMapper;
+import com.monetrax.monetrax.user.repository.UserRepository;
 import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({UserMapper.class, SecurityConfig.class})
+@Import({UserMapper.class, SecurityConfig.class, JwtService.class, CustomUserDetailsService.class})
 public class UserControllerTest {
 
     @Autowired
@@ -46,6 +49,9 @@ public class UserControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
 
     private final UserEntity userEntityTest;
     private final UserInformation userInformationTest;

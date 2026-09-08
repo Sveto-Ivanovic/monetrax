@@ -1,34 +1,31 @@
 package com.monetrax.monetrax.auth.controller;
 
-import com.monetrax.monetrax.user.service.impl.UserServiceImpl;
+
+import com.monetrax.monetrax.auth.dto.AuthRequest;
+import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.service.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-    @Autowired
-    private UserServiceImpl userService;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
+        @Autowired
+        private AuthService authService;
 
 
-    @PostMapping("/generateToken")
-    public String authenticateAndGetToken(@RequestBody ){
+        @PostMapping("/login")
+        public ResponseEntity<AuthResponse> authenticateAndGetToken(@Valid @RequestBody AuthRequest authInfo){
+            AuthResponse authResponse = authService.login(authInfo);
+            return ResponseEntity.ok(authResponse);
+        }
 
+
+        @GetMapping("/test")
+        public ResponseEntity<String> authenticateAndGetToken() {
+            return ResponseEntity.ok("Test");
+        }
     }
-
-
-
-
-
-
-
-
-}

@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.common.exception;
 
+import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
@@ -108,6 +109,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleHttpMessageNotReadableException(HttpMessageNotReadableException ex){
         return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidParamType"));
+    }
+
+    @ExceptionHandler(JwtAuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleJwtAuthenticationException(JwtAuthenticationException ex){
+        return new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), addCustomErrorToErrorResponse(ex.getMessage(), "UnauthorizedOrInvalidBearer"));
     }
 
 }

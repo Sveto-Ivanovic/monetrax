@@ -8,17 +8,22 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 public class CustomUserDetails implements UserDetails {
 
     private String username;
     private String password;
+    private UUID userId;
+    private boolean isVerified;
     private UserEntity userEntity;
     List<GrantedAuthority> authorities;
 
     public CustomUserDetails(UserEntity userEntity){
         this.username = userEntity.getUserEmail();
         this.password = userEntity.getPasswordHash();
+        this.userId= userEntity.getUserId();
+        this.isVerified = userEntity.isHasVerifiedEmail();
         this.authorities = new ArrayList<>();
         this.authorities.add(new SimpleGrantedAuthority(userEntity.getRole()));
     }
@@ -38,6 +43,10 @@ public class CustomUserDetails implements UserDetails {
         return username;
     }
 
+    public String getUserId() {
+        return userId.toString();
+    }
+
     @Override
     public boolean isAccountNonExpired() {
         return true;
@@ -55,6 +64,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return isVerified;
     }
 }

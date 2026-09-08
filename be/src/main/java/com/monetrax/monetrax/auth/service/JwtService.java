@@ -1,4 +1,4 @@
-package com.monetrax.monetrax.auth.security;
+package com.monetrax.monetrax.auth.service;
 
 import com.monetrax.monetrax.auth.dto.AuthInfo;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
@@ -8,20 +8,20 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 
-@Component
-public class JwtUtil {
+@Service
+public class JwtService {
 
-    @Value("jwt.secret")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("jwt.expiration")
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     private SecretKey key;
@@ -32,6 +32,7 @@ public class JwtUtil {
     }
 
     public String generateToken(String email, UUID userId){
+
         return Jwts.builder()
                 .subject(email)
                 .claim("type", "access")
