@@ -15,8 +15,6 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 public class CategoryUpdate {
 
-    private CategoryKind categoryType;
-
     @Size(min = 4, max = 50, message = "Size of the name must be between 4 and 50 characters.")
     private String name;
 

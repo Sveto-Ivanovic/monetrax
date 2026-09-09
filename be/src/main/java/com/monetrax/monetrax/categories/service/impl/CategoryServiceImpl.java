@@ -50,13 +50,12 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     public CategoryInformation updateCategory(CategoryUpdate categoryToUpdate, UUID categoryId, UUID userId){
-        if (categoryToUpdate.getCategoryType() == null && categoryToUpdate.getDescription() == null && categoryToUpdate.getName() == null) {
+        if (categoryToUpdate.getDescription() == null && categoryToUpdate.getName() == null) {
             throw new MissingFieldsForCategoryUpdate("At least one field must be provided for update");
         }
 
         CategoryEntity resp =categoryRepository.fetchUsersCategory(categoryId, userId).orElseThrow(()->new NoSuchCategoryExistsException("No category with id: "+ categoryId));
 
-        Optional.ofNullable(categoryToUpdate.getCategoryType()).ifPresent(resp::setCategoryType);
         Optional.ofNullable(categoryToUpdate.getDescription()).ifPresent(resp::setDescription);
         Optional.ofNullable(categoryToUpdate.getName()).ifPresent(resp::setName);
 

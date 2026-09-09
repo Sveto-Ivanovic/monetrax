@@ -10,6 +10,7 @@ import com.monetrax.monetrax.user.exception.PasswordMismatchException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.*;
 
@@ -189,4 +191,15 @@ public class GlobalExceptionHandler {
     }
 
 
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleAccessDeniedException(AccessDeniedException ex){
+        return new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), addCustomErrorToErrorResponse(ex.getMessage(), "BadAuth"));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoResourceFoundException(NoResourceFoundException ex){
+        return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "MissingRoute"));
+    }
 }
