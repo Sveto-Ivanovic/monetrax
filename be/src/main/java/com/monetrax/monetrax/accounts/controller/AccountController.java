@@ -35,7 +35,7 @@ public class AccountController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<AccountInformation> createCategory(@AuthenticationPrincipal CustomUserDetails customUserDetails, @Valid AccountCreate accountCreate){
+    public ResponseEntity<AccountInformation> createCategory(@AuthenticationPrincipal CustomUserDetails customUserDetails, @Valid @RequestBody AccountCreate accountCreate){
         return ResponseEntity.ok().body(accountService.createAccount(accountCreate, UUID.fromString(customUserDetails.getUserId())));
     }
 

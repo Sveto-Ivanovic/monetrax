@@ -17,7 +17,6 @@ public class AccountMapper {
                 .accountId(accountEntity.getAccountId())
                 .accountNumberMasked(accountEntity.getAccountNumberMasked())
                 .active(accountEntity.isActive())
-                .createdAt(accountEntity.getCreatedAt())
                 .currency(accountEntity.getCurrency())
                 .currentBalance(accountEntity.getCurrentBalance())
                 .description(accountEntity.getDescription())

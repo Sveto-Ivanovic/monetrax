@@ -37,13 +37,10 @@ public class CategoryControllerIntegrationTest {
     @LocalServerPort
     private int port;
 
-    private TestRestTemplate restTemplate = new TestRestTemplate();
+    private final TestRestTemplate restTemplate = new TestRestTemplate();
 
     @Autowired
     private CategoryRepository categoryRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
 
     @Autowired
     private UserRepository userRepository;

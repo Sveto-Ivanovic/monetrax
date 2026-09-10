@@ -25,6 +25,5 @@ public class AccountInformation {
     private String institutionName;
     private String accountNumberMasked;
     private boolean active;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+
 }
