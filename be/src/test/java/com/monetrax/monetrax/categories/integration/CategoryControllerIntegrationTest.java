@@ -11,6 +11,7 @@ import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
 
 import com.monetrax.monetrax.user.dto.UserCreation;
 import com.monetrax.monetrax.user.dto.UserInformation;
+import com.monetrax.monetrax.user.repository.UserRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -43,6 +44,9 @@ public class CategoryControllerIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private UserRepository userRepository;
 
     private String authToken;
     private UUID userId;
@@ -85,6 +89,11 @@ public class CategoryControllerIntegrationTest {
             if(!element.isDefaultCategory())
                 categoryRepository.delete(element);
         });
+    }
+
+    @AfterAll
+    void deleteTheUser(){
+        userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 
     private CategoryCreate categoryCreate =  CategoryCreate.builder()
