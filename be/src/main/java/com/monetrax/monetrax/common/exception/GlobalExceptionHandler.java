@@ -1,5 +1,7 @@
 package com.monetrax.monetrax.common.exception;
 
+import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
+import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
@@ -201,5 +203,17 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNoResourceFoundException(NoResourceFoundException ex){
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "MissingRoute"));
+    }
+
+    @ExceptionHandler(NoAccountDataToUpdate.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoAccountDataToUpdate(NoAccountDataToUpdate ex){
+        return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "MissingFields"));
+    }
+
+    @ExceptionHandler(NoSuchAccountFound.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoSuchAccountFound(NoSuchAccountFound ex){
+        return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidAccountID"));
     }
 }
