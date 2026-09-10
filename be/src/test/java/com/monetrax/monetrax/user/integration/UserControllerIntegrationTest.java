@@ -1,15 +1,21 @@
 package com.monetrax.monetrax.user.integration;
 
+import com.monetrax.monetrax.auth.dto.AuthRequest;
+import com.monetrax.monetrax.auth.dto.AuthResponse;
 import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
 import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,12 +35,9 @@ public class UserControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @AfterEach
     void cleanChanges(){
-        userRepository.deleteAll();
+        userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 
     private UserCreation userCreation = UserCreation.builder()
@@ -58,25 +61,26 @@ public class UserControllerIntegrationTest {
                 baseUrl + "/user/create", userCreation, UserInformation.class);
         UserInformation resUserInformation = res.getBody();
 
-        ResponseEntity<UserInformation> resGet = restTemplate.getForEntity(
-                baseUrl + "/user/me/" + resUserInformation.getUserId(), UserInformation.class);
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+          baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        ResponseEntity<UserInformation> resGet = restTemplate.exchange(
+                baseUrl + "/user/me", HttpMethod.GET, entity, UserInformation.class);
 
         assertEquals(resGet.getBody(), resUserInformation);
 
     }
-
-    @Test
-    public void fetchNonExistentUserIT(){
-        String baseUrl = "http://localhost:" + port;
-
-        ResponseEntity<ErrorResponse> resGet = restTemplate.getForEntity(
-                baseUrl + "/user/me/" + "7f3a9c21-6d84-4b17-a5e2-91c0f8d73b49", ErrorResponse.class);
-
-        var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("No user with id: "+ "7f3a9c21-6d84-4b17-a5e2-91c0f8d73b49","param:user_id");
-        ErrorResponse err = new ErrorResponse(404,expectedErrors);
-        assertEquals(resGet.getBody(), err);
-    }
-
 
     @Test
     public void createUserWithAlreadyPresentEmailInDatabaseIT(){
@@ -104,14 +108,30 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userId = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
         UserUpdate userUpdate = UserUpdate.builder()
                 .userEmail("john.smith@example.com")
                 .userName("johnsmith")
                 .surname("Smith")
                 .build();
 
-        UserInformation res2 = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userId, userUpdate, UserInformation.class);
+        HttpEntity<UserUpdate> entity = new HttpEntity<>(userUpdate, headers);
+
+        ResponseEntity<UserInformation> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update", HttpMethod.PATCH, entity, UserInformation.class);
+
+        UserInformation res2 = resUpdate.getBody();
 
         assertNotEquals(res2, res.getBody());
         assertEquals("john.smith@example.com", res2.getUserEmail());
@@ -130,11 +150,28 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userId = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+
         UserUpdate userUpdate = UserUpdate.builder()
                 .build();
 
-        ErrorResponse res2 = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userId, userUpdate, ErrorResponse.class);
+        HttpEntity<UserUpdate> entity = new HttpEntity<>(userUpdate, headers);
+
+        ResponseEntity<ErrorResponse> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update", HttpMethod.PATCH, entity, ErrorResponse.class);
+
+        ErrorResponse res2 = resUpdate.getBody();
 
         var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("Nothing to update user with.","insertFieldInRequest");
         ErrorResponse errRes = new ErrorResponse(400, expectedErrors);
@@ -159,12 +196,30 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userIdTarget = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+
+
         UserUpdate userUpdate = UserUpdate.builder()
                 .userEmail("emailThatExistsInDB@email.com")
                 .build();
 
-        ErrorResponse resErr = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userIdTarget, userUpdate, ErrorResponse.class);
+        HttpEntity<UserUpdate> entity = new HttpEntity<>(userUpdate, headers);
+
+        ResponseEntity<ErrorResponse> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update", HttpMethod.PATCH, entity, ErrorResponse.class);
+
+        ErrorResponse resErr = resUpdate.getBody();
 
         var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("Cannot update user with present email as the email already exists.","userEmail");
         ErrorResponse errRes = new ErrorResponse(403, expectedErrors);
@@ -182,13 +237,30 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userId = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+
         UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
                 .oldPassword("TestPass123!")
                 .newPassword("TestPass123456!")
                 .build();
 
-        UserSuccessfulPasswordUpdate res2 = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userId+"/password", userUpdatePassword, UserSuccessfulPasswordUpdate.class);
+        HttpEntity<UserUpdatePassword> entity = new HttpEntity<>(userUpdatePassword, headers);
+
+        ResponseEntity<UserSuccessfulPasswordUpdate> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update/password", HttpMethod.PATCH, entity, UserSuccessfulPasswordUpdate.class);
+
+        UserSuccessfulPasswordUpdate res2 = resUpdate.getBody();
 
         UserSuccessfulPasswordUpdate resEx = new UserSuccessfulPasswordUpdate(true);
         assertEquals(resEx, res2);
@@ -206,13 +278,30 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userId = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+
         UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
                 .oldPassword("TestPass123!.")
                 .newPassword("TestPass123!")
                 .build();
 
-        ErrorResponse res2 = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userId+"/password", userUpdatePassword, ErrorResponse.class);
+        HttpEntity<UserUpdatePassword> entity = new HttpEntity<>(userUpdatePassword, headers);
+
+        ResponseEntity<ErrorResponse> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update/password", HttpMethod.PATCH, entity, ErrorResponse.class);
+
+        ErrorResponse res2 = resUpdate.getBody();
 
         var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("The provided old password is not equal to the one provided in database.","incorrectPassword");
         ErrorResponse errRes = new ErrorResponse(400, expectedErrors);
@@ -230,13 +319,31 @@ public class UserControllerIntegrationTest {
         assertNotNull(res.getBody().getUserId());
         UUID userId = res.getBody().getUserId();
 
+        AuthRequest authRequest = AuthRequest.builder()
+                .email("john.doe742@example.com")
+                .password("TestPass123!")
+                .build();
+
+        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
+                baseUrl+"/auth/login", authRequest, AuthResponse.class
+        );
+        assert resAuth.getBody() != null;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
+
+
         UserUpdatePassword userUpdatePassword = UserUpdatePassword.builder()
                 .oldPassword("TestPass123!")
                 .newPassword("TestPass123!")
                 .build();
 
-        ErrorResponse res2 = restTemplate.patchForObject(
-                baseUrl + "/user/update/"+userId+"/password", userUpdatePassword, ErrorResponse.class);
+        HttpEntity<UserUpdatePassword> entity = new HttpEntity<>(userUpdatePassword, headers);
+
+        ResponseEntity<ErrorResponse> resUpdate = restTemplate.exchange(
+                baseUrl + "/user/update/password", HttpMethod.PATCH, entity, ErrorResponse.class);
+
+        ErrorResponse res2 = resUpdate.getBody();
 
         var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("The new password must not be equal to the old one.","incorrectPassword");
         ErrorResponse errRes = new ErrorResponse(400, expectedErrors);

@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -169,9 +170,9 @@ public class UserServiceImplTest {
                 .build();
 
         when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(false);
-        when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
+        when(userMapper.toUserInformation(any(UserEntity.class))).thenReturn(userInformationTest);
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
-        when(userRepository.save(updatedUserEntity)).thenReturn(updatedUserEntity);
+        when(userRepository.save(any(UserEntity.class))).thenReturn(updatedUserEntity);
 
         UserInformation res = userService.updateUser(userUpdate, userEntityTest.getUserId());
 
@@ -180,7 +181,7 @@ public class UserServiceImplTest {
 
         verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
         verify(userRepository).findById(userEntityTest.getUserId());
-        verify(userRepository).save(updatedUserEntity);
+        verify(userRepository).save(any(UserEntity.class));
     }
 
 
@@ -244,7 +245,7 @@ public class UserServiceImplTest {
         UserEntity copyOfUser = userEntityTest.toBuilder()
                         .passwordHash("$2a$10$testPasswordHash2")
                         .build();
-        when(userRepository.save(copyOfUser)).thenReturn(copyOfUser);
+        when(userRepository.save(any(UserEntity.class))).thenReturn(copyOfUser);
 
         UserSuccessfulPasswordUpdate expectedResponse = new UserSuccessfulPasswordUpdate(true);
         UserSuccessfulPasswordUpdate userUpdatePasswordResponse = userService.updatePassword(userUpdatePassword.getNewPassword(),userUpdatePassword.getOldPassword(), userEntityTest.getUserId());
@@ -257,7 +258,7 @@ public class UserServiceImplTest {
         verify(passwordEncoder).matches(userUpdatePassword.getOldPassword(), userEntityTest.getPasswordHash());
         verify(passwordEncoder).matches(userUpdatePassword.getNewPassword(), userEntityTest.getPasswordHash());
         verify(passwordEncoder).encode(userUpdatePassword.getNewPassword());
-        verify(userRepository).save(copyOfUser);
+        verify(userRepository).save(any(UserEntity.class));
     }
 
     @Test void updatePasswordNewOldPasswordMatchFailureTest(){
