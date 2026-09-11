@@ -2,6 +2,7 @@ package com.monetrax.monetrax.categories.service.impl;
 
 import com.monetrax.monetrax.categories.dto.*;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
+import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.categories.mapper.CategoryMapper;
@@ -20,9 +21,9 @@ import java.util.UUID;
 @Service
 public class CategoryServiceImpl implements CategoryService {
 
-    private CategoryRepository categoryRepository;
-    private CategoryMapper categoryMapper;
-    private UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
+    private final UserRepository userRepository;
 
     public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, UserRepository userRepository){
         this.categoryRepository = categoryRepository;
@@ -36,6 +37,10 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     public CategoryInformation createCategory(CategoryCreate category, UUID userId){
+        if(categoryRepository.fetchUsersAndDefaultCategoriesNames(userId).contains(category.getName())){
+            throw new CategoryAlreadyExistsException("The category name already exists.");
+        }
+
         UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
         CategoryEntity categoryToCreate = categoryMapper.fromCategoryCreateToCategoryEntity(category, user);
         CategoryEntity savedCategory = categoryRepository.save(categoryToCreate);
@@ -50,8 +55,13 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     public CategoryInformation updateCategory(CategoryUpdate categoryToUpdate, UUID categoryId, UUID userId){
+
         if (categoryToUpdate.getDescription() == null && categoryToUpdate.getName() == null) {
             throw new MissingFieldsForCategoryUpdate("At least one field must be provided for update");
+        }
+
+        if(categoryRepository.fetchUsersAndDefaultCategoriesNames(userId).contains(categoryToUpdate.getName())){
+            throw new CategoryAlreadyExistsException("The category name already exists.");
         }
 
         CategoryEntity resp =categoryRepository.fetchUsersCategory(categoryId, userId).orElseThrow(()->new NoSuchCategoryExistsException("No category with id: "+ categoryId));

@@ -3,6 +3,7 @@ package com.monetrax.monetrax.common.exception;
 import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
+import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
@@ -215,5 +216,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNoSuchAccountFound(NoSuchAccountFound ex){
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidAccountID"));
+    }
+
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleCategoryAlreadyExistsException(CategoryAlreadyExistsException ex){
+        return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidCategoryName"));
     }
 }

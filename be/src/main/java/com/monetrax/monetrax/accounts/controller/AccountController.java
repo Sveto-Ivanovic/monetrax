@@ -39,7 +39,7 @@ public class AccountController {
         return ResponseEntity.ok().body(accountService.createAccount(accountCreate, UUID.fromString(customUserDetails.getUserId())));
     }
 
-    @PostMapping("/account/{account_id}/update")
+    @PutMapping("/account/{account_id}/update")
     public ResponseEntity<AccountInformation> updateAccount(@AuthenticationPrincipal CustomUserDetails customUserDetails, @PathVariable UUID account_id, @Valid @RequestBody AccountUpdate accountUpdate){
         return ResponseEntity.ok().body(accountService.updateAccount(accountUpdate, account_id, UUID.fromString(customUserDetails.getUserId())));
     }

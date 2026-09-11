@@ -96,6 +96,7 @@ public class AccountServiceImpl implements AccountService {
         });
 
         account.setArchived(archived);
+        account.setActive(false);
         AccountEntity accountEntity = accountRepository.save(account);
         return accountMapper.fromAccountEntityToAccountInformation(accountEntity);
     }
