@@ -18,4 +18,7 @@ public interface CategoryRepository  extends JpaRepository<CategoryEntity, UUID>
 
     @Query("select e from CategoryEntity e where e.categoryId = ?1 and e.user.userId = ?2")
     public Optional<CategoryEntity> fetchUsersCategory(UUID categoryId, UUID userId);
+
+    @Query("select e.name from CategoryEntity e where e.defaultCategory = true or e.user.userId = ?1")
+    public List<String> fetchUsersAndDefaultCategoriesNames(UUID userId);
 }

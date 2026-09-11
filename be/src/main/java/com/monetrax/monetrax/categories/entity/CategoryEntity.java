@@ -23,7 +23,7 @@ public class CategoryEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID categoryId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;
 
