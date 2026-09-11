@@ -74,16 +74,18 @@ public class AccountServiceImpl implements AccountService {
             return new NoSuchAccountFound("No such account exists!");
         });
 
-        if(accountUpdate.getAccountNumberMasked()==null ||
-                accountUpdate.getDescription()==null ||
-                accountUpdate.getInstitutionName()==null ||
-                accountUpdate.getName() == null)
+        if(accountUpdate.getAccountNumberMasked()==null &&
+                accountUpdate.getDescription()==null &&
+                accountUpdate.getInstitutionName()==null &&
+                accountUpdate.getName() == null &&
+                accountUpdate.getToggleActivate() == null)
             throw new NoAccountDataToUpdate("Please insert field to update.");
 
-        Optional.of(accountUpdate.getAccountNumberMasked()).ifPresent(account::setAccountNumberMasked);
-        Optional.of(accountUpdate.getName()).ifPresent(account::setName);
-        Optional.of(accountUpdate.getDescription()).ifPresent(account::setDescription);
-        Optional.of(accountUpdate.getInstitutionName()).ifPresent(account::setInstitutionName);
+        Optional.ofNullable(accountUpdate.getAccountNumberMasked()).ifPresent(account::setAccountNumberMasked);
+        Optional.ofNullable(accountUpdate.getName()).ifPresent(account::setName);
+        Optional.ofNullable(accountUpdate.getDescription()).ifPresent(account::setDescription);
+        Optional.ofNullable(accountUpdate.getInstitutionName()).ifPresent(account::setInstitutionName);
+        Optional.ofNullable(accountUpdate.getToggleActivate()).ifPresent(account::setActive);
 
         AccountEntity accountEntity = accountRepository.save(account);
         return accountMapper.fromAccountEntityToAccountInformation(accountEntity);
