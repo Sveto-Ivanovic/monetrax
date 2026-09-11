@@ -27,4 +27,6 @@ public class AccountUpdate {
 
     @Size(min = 4, max = 4)
     private String accountNumberMasked;
+
+    private Boolean toggleActivate;
 }
