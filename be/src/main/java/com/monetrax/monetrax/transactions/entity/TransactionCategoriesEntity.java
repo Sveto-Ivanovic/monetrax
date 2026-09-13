@@ -2,8 +2,16 @@ package com.monetrax.monetrax.transactions.entity;
 
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class TransactionCategoriesEntity {
     @EmbeddedId
     private TransactionCategoriesEmbeddable id;

@@ -1,4 +1,4 @@
-CREATE TYPE adjustment_kind  AS ENUM ('DEDUCTION', 'ADDITION');
+CREATE TYPE adjustment_kind  AS ENUM ('INCOME', 'EXPENSE', 'TRANSFER_FROM', 'ADJUSTMENT_PLUS', 'TRANSFER_TO', 'ADJUSTMENT_MINUS');
 
 CREATE TABLE transactions (
                               transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

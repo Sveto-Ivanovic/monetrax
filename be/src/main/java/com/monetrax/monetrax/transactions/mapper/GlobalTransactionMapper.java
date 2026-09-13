@@ -2,6 +2,7 @@ package com.monetrax.monetrax.transactions.mapper;
 
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
+import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.TransactionAdditionalInfoEntity;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class GlobalTransactionMapper {
@@ -86,6 +88,22 @@ public class GlobalTransactionMapper {
                 .amount(transactionLineItemsEntity.getAmount())
                 .productName(transactionLineItemsEntity.getProductName())
                 .lineItemId(transactionLineItemsEntity.getLineItemId())
+                .build();
+    }
+
+    public TransactionInformationPart fromTransactionEntityToTransactionInformationPart(TransactionEntity transactionEntity, List<CategoryEntity> categoryEntities){
+       List<String> categories = categoryEntities.stream()
+               .map(CategoryEntity::getName)
+               .toList();
+        return TransactionInformationPart.builder()
+                .amount(transactionEntity.getAmount())
+                .categories(categories)
+                .categoryType(transactionEntity.getCategoryType())
+                .createdAt(transactionEntity.getCreatedAt())
+                .currency(transactionEntity.getCurrency())
+                .description(transactionEntity.getDescription())
+                .name(transactionEntity.getName())
+                .transactionId(transactionEntity.getTransactionId())
                 .build();
     }
 

@@ -8,7 +8,7 @@ CREATE TABLE transactions (
                               amount NUMERIC(14,2) NOT NULL,
                               amount_native NUMERIC(14,2) NOT NULL,
                               currency CHAR(3) NOT NULL,
-                              category_type VARCHAR(50) NOT NULL CHECK (category_type IN ('INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT')),
+                              category_type VARCHAR(50) NOT NULL CHECK (category_type IN ('INCOME', 'EXPENSE', 'TRANSFER_FROM', 'ADJUSTMENT_PLUS', 'TRANSFER_TO', 'ADJUSTMENT_MINUS')),
                               created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

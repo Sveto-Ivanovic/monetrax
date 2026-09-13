@@ -46,8 +46,3 @@ public class TransactionCreate {
     @NotNull
     private List<TransactionLineItemsCreate> lineInformation;
 }
-
-class RequestedCategoryInformation {
-    private UUID categoryId;
-    private String name;
-}
