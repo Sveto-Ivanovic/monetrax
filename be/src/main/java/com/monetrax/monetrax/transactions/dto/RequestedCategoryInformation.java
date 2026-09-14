@@ -1,9 +1,6 @@
 package com.monetrax.monetrax.transactions.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -11,7 +8,10 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(of = "categoryId")
 public class RequestedCategoryInformation {
     private UUID categoryId;
     private String name;
+
+
 }

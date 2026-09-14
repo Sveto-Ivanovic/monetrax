@@ -22,10 +22,12 @@ public class GlobalTransactionMapper {
                                                                       UserEntity userEntity,
                                                                       AccountEntity accountEntity,
                                                                       BigDecimal amountNative,
-                                                                      CategoryKind categoryKind){
+                                                                      CategoryKind categoryKind,
+                                                                      BigDecimal conversionFactor){
         return TransactionEntity.builder()
                 .user(userEntity)
                 .account(accountEntity)
+                .conversionFactor(conversionFactor)
                 .amount(transactionCreate.getAmount())
                 .amountNative(amountNative)
                 .categoryType(categoryKind)
@@ -65,6 +67,8 @@ public class GlobalTransactionMapper {
                 .categoryType(transactionEntity.getCategoryType())
                 .createdAt(transactionEntity.getCreatedAt())
                 .currency(transactionEntity.getCurrency())
+                .conversionFactor(transactionEntity.getConversionFactor())
+                .nativeAmount(transactionEntity.getAmountNative())
                 .description(transactionEntity.getDescription())
                 .name(transactionEntity.getDescription())
                 .transactionId(transactionEntity.getTransactionId())

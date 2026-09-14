@@ -7,6 +7,7 @@ CREATE TABLE transactions (
                               name VARCHAR(150) NOT NULL,
                               description VARCHAR(500),
                               amount NUMERIC(14,2) NOT NULL,
+                              conversion_factor DECIMAL(18,8)
                               amount_native NUMERIC(14,2) NOT NULL,
                               currency CHAR(3) NOT NULL,
                               category_type category_kind  not null,

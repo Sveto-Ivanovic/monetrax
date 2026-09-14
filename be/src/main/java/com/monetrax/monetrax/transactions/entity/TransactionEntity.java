@@ -32,6 +32,9 @@ public class TransactionEntity {
     @Column(name = "name",  length = 150)
     private String name;
 
+    @Column(name = "conversion_factor", precision = 18, scale = 8)
+    private BigDecimal conversionFactor;
+
     @Column(name = "description", length = 500)
     private String description;
 

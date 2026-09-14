@@ -24,6 +24,8 @@ public class TransactionInformation {
     private String currency;
     private CategoryKind categoryType;
     private OffsetDateTime createdAt;
+    private BigDecimal nativeAmount;
+    private BigDecimal conversionFactor;
     private List<CategoryInformation> categories;
     private List<TransactionAdditionalInfoInformation> additionalInfo;
     private List<TransactionLineItemsInformation> lineItemsInformation;

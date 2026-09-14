@@ -24,11 +24,17 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Service
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionAdditionalInfoRepository transactionAdditionalInfoRepository;
@@ -53,6 +59,50 @@ public class TransactionServiceImpl implements TransactionService {
         this.accountMapper = accountMapper;
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
+    }
+
+    @AllArgsConstructor
+    @Builder
+    @NoArgsConstructor
+    @Data
+    class CategoryRelatedData {
+        List<CategoryEntity> listOfAllAvailableCategories;
+        Map<UUID, CategoryEntity> categoryEntityMap;
+        Set<RequestedCategoryInformation> requestedCategoryInformationSet;
+        CategoryKind categoryKind;
+    }
+
+    private CategoryRelatedData checkCreateUpdateCategoryValidity( List<RequestedCategoryInformation> selectedCategories, UUID userId){
+        //check if categories don't exist or if all categories don't share the same category type
+        if(selectedCategories.isEmpty())
+            throw new InvalidTransactionCreationException("You need to select one or more categories!");
+
+        // get all categories available to user
+        List<CategoryEntity> listOfAllAvailableCategories = categoryRepository.fetchUsersAndDefaultCategories(true, userId);
+        Map<UUID, CategoryEntity> categoryEntityMap = listOfAllAvailableCategories.stream()
+                .collect(Collectors.toMap(CategoryEntity::getCategoryId, e->e));
+
+
+        // selected categories should be turned to set
+        Set<RequestedCategoryInformation> requestedCategoryInformationSet = new HashSet<>(selectedCategories);
+
+        // Here we are checking if categories are correct
+        // get one category which we will compare to the rest of selected ones and if one is different we will throw exception
+        final CategoryKind categoryKind = categoryEntityMap.get(selectedCategories.get(0).getCategoryId()).getCategoryType();
+        requestedCategoryInformationSet.forEach((e)->{
+            CategoryEntity categoryItem = categoryEntityMap.get(e.getCategoryId());
+            if(categoryItem == null)
+                throw new InvalidTransactionCreationException("One or more selected categories are invalid.");
+            if(categoryKind!=categoryItem.getCategoryType())
+                throw new InvalidTransactionCreationException("All selected categories must be of the same type.");
+        });
+
+        return CategoryRelatedData.builder()
+                .categoryEntityMap(categoryEntityMap)
+                .categoryKind(categoryKind)
+                .listOfAllAvailableCategories(listOfAllAvailableCategories)
+                .requestedCategoryInformationSet(requestedCategoryInformationSet)
+                .build();
     }
 
 
@@ -158,32 +208,20 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
-    public TransactionInformation createTransaction(TransactionCreate transactionCreate, UUID userId, UUID accountId) {
+    public TransactionCreateUpdateResponse createTransaction(TransactionCreate transactionCreate, UUID userId, UUID accountId) {
 
+        // fetch user and account
         UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
             return new NoSuchAccountFound("No such account exists!");
         });
 
-
-        //check if categories don't exist or if all categories don't share the same category type
-        if(transactionCreate.getCategories().isEmpty())
-            throw new InvalidTransactionCreationException("You need to select one or more categories!");
-
-        List<CategoryEntity> listOfAllAvailableCategories = categoryRepository.fetchUsersAndDefaultCategories(true, userId);
-        Map<UUID, CategoryEntity> categoryEntityMap = listOfAllAvailableCategories.stream()
-                .collect(Collectors.toMap(CategoryEntity::getCategoryId, e->e));
-
-        // Here we are checking if categories are correct
-        final CategoryKind categoryKind = categoryEntityMap.get(transactionCreate.getCategories().get(0).getCategoryId()).getCategoryType();
-        transactionCreate.getCategories()
-                .forEach((e)->{
-                    CategoryEntity categoryItem = categoryEntityMap.get(e.getCategoryId());
-                    if(categoryItem == null)
-                        throw new InvalidTransactionCreationException("One or more selected categories are invalid.");
-                    if(categoryKind!=categoryItem.getCategoryType())
-                        throw new InvalidTransactionCreationException("All selected categories must be of the same type.");
-                });
+        // method for checking the validity of categories, getting category map categoryUUID - categoryEntity, Set/deduplication of the the categories
+        // and shared category kind between all of the categories
+        CategoryRelatedData categoryRelatedData = checkCreateUpdateCategoryValidity(transactionCreate.getCategories(), userId);
+        Map<UUID, CategoryEntity> categoryEntityMap = categoryRelatedData.getCategoryEntityMap();
+        Set<RequestedCategoryInformation> requestedCategoryInformationSet = categoryRelatedData.getRequestedCategoryInformationSet();
+        CategoryKind categoryKind = categoryRelatedData.getCategoryKind();
 
         //************************************************************************************************************************
         // conversion logic should be implemented bellow
@@ -191,13 +229,20 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal amountNative = transactionCreate.getAmount();
         //************************************************************************************************************************
 
-        TransactionEntity transactionEntity = globalTransactionMapper.fromTransactionCreateToTransactionEntity(transactionCreate, user, account, amountNative, categoryKind);
+        // save transaction and get uuid
+        TransactionEntity transactionEntity = globalTransactionMapper.fromTransactionCreateToTransactionEntity(transactionCreate,
+                user,
+                account,
+                amountNative,
+                categoryKind,
+                new BigDecimal("1.00"));
+
         TransactionEntity transactionEntitySaved  = transactionRepository.save(transactionEntity);
 
 
         // save TransactionCategoryEntity
         List<TransactionCategoriesEntity> transactionCategoriesEntities = new ArrayList<>();
-        for(var x: transactionCreate.getCategories()){
+        for(var x: requestedCategoryInformationSet){
             var tce = new TransactionCategoriesEmbeddable(transactionEntitySaved.getTransactionId(), x.getCategoryId());
             transactionCategoriesEntities.add(new TransactionCategoriesEntity(tce, transactionEntitySaved, categoryEntityMap.get(x.getCategoryId())));
         }
@@ -232,8 +277,8 @@ public class TransactionServiceImpl implements TransactionService {
 
         // finally update the account amount
         BigDecimal updatedCurrentBalance = switch (categoryKind) {
-            case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().add(transactionEntitySaved.getAmount());
-            case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().subtract(transactionEntitySaved.getAmount());
+            case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().add(transactionEntitySaved.getAmountNative());
+            case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().subtract(transactionEntitySaved.getAmountNative());
         };
 
         account.setCurrentBalance(updatedCurrentBalance);
@@ -243,6 +288,166 @@ public class TransactionServiceImpl implements TransactionService {
         // code for handling alerts
         //*************************************************************************************************************************
 
-        return null;
+        return new TransactionCreateUpdateResponse("Transaction successfully created.", transactionEntitySaved.getTransactionId());
     }
+
+    @Override
+    @Transactional
+    public TransactionCreateUpdateResponse updateTransaction(TransactionUpdate transactionUpdate, UUID userId, UUID transactionId) {
+
+        if (transactionUpdate.getName() == null
+                && transactionUpdate.getDescription() == null
+                && transactionUpdate.getAmount() == null
+                && transactionUpdate.getConversionFactor() == null
+                && (transactionUpdate.getCategories() == null
+                || transactionUpdate.getCategories().isEmpty())) {
+
+            throw new RuntimeException("At least one field needs to be provided.");
+        }
+
+        //fetch transaction
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+
+        //fetch user and account
+        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
+        AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
+            return new NoSuchAccountFound("No such account exists!");
+        });
+
+        // original amounts
+        BigDecimal nativeAmountPrevious = transactionEntity.getAmountNative();
+        CategoryKind previousCategory = transactionEntity.getCategoryType();
+
+        // logic tied to categories
+        if((transactionUpdate.getCategories() != null
+                && !transactionUpdate.getCategories().isEmpty())){
+            // method for checking the validity of categories, getting category map categoryUUID - categoryEntity, Set/deduplication of the the categories
+            // and shared category kind between all of the categories
+            CategoryRelatedData categoryRelatedData = checkCreateUpdateCategoryValidity(transactionUpdate.getCategories(), userId);
+            Map<UUID, CategoryEntity> categoryEntityMap = categoryRelatedData.getCategoryEntityMap();
+            Set<RequestedCategoryInformation> requestedCategoryInformationSet = categoryRelatedData.getRequestedCategoryInformationSet();
+            CategoryKind categoryKind = categoryRelatedData.getCategoryKind();
+
+            // update the TransactionCategory table
+            // First delete all the transactions
+            List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
+            int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
+            if (num_of_deleted != transactionCategoriesEntityList.size()) {
+                throw new IllegalStateException("Category deletion count mismatch for transaction " + transactionId);
+            }
+
+            // update with new ones
+            List<TransactionCategoriesEntity> transactionCategoriesEntities = new ArrayList<>();
+            for(var x: requestedCategoryInformationSet){
+                var tce = new TransactionCategoriesEmbeddable(transactionEntity.getTransactionId(), x.getCategoryId());
+                transactionCategoriesEntities.add(new TransactionCategoriesEntity(tce, transactionEntity, categoryEntityMap.get(x.getCategoryId())));
+            }
+            transactionCategoriesRepository.saveAll(transactionCategoriesEntities);
+            Optional.ofNullable(categoryKind).ifPresent(transactionEntity::setCategoryType);
+        }
+
+        // here we don't need conversion logic either we use the old or the user provided
+        BigDecimal amountNative = null;
+        if(transactionUpdate.getAmount()!=null){
+            if(transactionUpdate.getConversionFactor()==null)
+                amountNative = transactionUpdate.getAmount().multiply(transactionEntity.getConversionFactor());
+            else
+                amountNative = transactionUpdate.getAmount().multiply(transactionUpdate.getConversionFactor());
+        }
+
+        // update and save transaction
+        Optional.ofNullable(transactionUpdate.getName()).ifPresent(transactionEntity::setName);
+        Optional.ofNullable(transactionUpdate.getConversionFactor()).ifPresent(transactionEntity::setConversionFactor);
+        Optional.ofNullable(transactionUpdate.getAmount()).ifPresent(transactionEntity::setAmount);
+        Optional.ofNullable(transactionUpdate.getDescription()).ifPresent(transactionEntity::setDescription);
+        Optional.ofNullable(amountNative).ifPresent(transactionEntity::setAmountNative);
+
+
+        TransactionEntity transactionEntityUpdated = transactionRepository.save(transactionEntity);
+
+
+        if(amountNative!=null || transactionEntityUpdated.getCategoryType() != previousCategory){
+            // revert old vals
+            BigDecimal revertCurrentBalance = switch (previousCategory) {
+                case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().subtract(nativeAmountPrevious);
+                case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().add(nativeAmountPrevious);
+            };
+            BigDecimal updatedCurrentBalance;
+            if(amountNative!=null){
+                // update account with new vals
+                updatedCurrentBalance = switch (transactionEntityUpdated.getCategoryType()) {
+                    case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> revertCurrentBalance.add(amountNative);
+                    case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> revertCurrentBalance.subtract(amountNative);
+                };
+            } else{
+                // case when we only switch categories, in case expense -> income we increment by + 2xtransaction amount from old state
+                updatedCurrentBalance = switch (transactionEntityUpdated.getCategoryType()) {
+                    case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> revertCurrentBalance.add(nativeAmountPrevious);
+                    case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> revertCurrentBalance.subtract(nativeAmountPrevious);
+                };
+            }
+
+
+            account.setCurrentBalance(updatedCurrentBalance);
+            accountRepository.save(account);
+        }
+
+        //*************************************************************************************************************************
+        // code for handling alerts
+        //*************************************************************************************************************************
+
+        return new TransactionCreateUpdateResponse("Transaction successfully updated.", transactionEntity.getTransactionId());
+    }
+
+    @Override
+    @Transactional
+    public TransactionCreateUpdateResponse deleteTransaction(UUID userId, UUID transactionId) {
+        //fetch transaction
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+
+        //fetch user and account
+        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
+        AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
+            return new NoSuchAccountFound("No such account exists!");
+        });
+
+        // Delete all transaction categories
+        List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
+        int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
+        if (num_of_deleted != transactionCategoriesEntityList.size()) {
+            throw new IllegalStateException("Category deletion count mismatch for transaction " + transactionId);
+        }
+
+        // Delete all additional info categories
+        List<TransactionAdditionalInfoEntity> transactionAdditionalInfoEntities = transactionAdditionalInfoRepository.fetchAllTransactionsAdditionalInfo(transactionId);
+        if(!transactionAdditionalInfoEntities.isEmpty()){
+            int num_of_deletion = transactionAdditionalInfoRepository.deleteAllTransactionAdditionalInfoByTransactionId(transactionId);
+            if (num_of_deletion != transactionAdditionalInfoEntities.size()) {
+                throw new IllegalStateException("Additional information deletion count mismatch for transaction " + transactionId);
+            }
+        }
+
+        // Delete all line items categories
+        List<TransactionLineItemsEntity> transactionLineItemsEntities = transactionLineItemsRepository.fetchAllTransactionsLineProducts(transactionId);
+        if(!transactionLineItemsEntities.isEmpty()){
+            int num_of_deletion = transactionLineItemsRepository.deleteAllTransactionLineItemsByTransactionId(transactionId);
+            if (num_of_deletion != transactionLineItemsEntities.size()) {
+                throw new IllegalStateException("Line items deletion count mismatch for transaction " + transactionId);
+            }
+        }
+
+        BigDecimal revertCurrentBalance = switch (transactionEntity.getCategoryType()) {
+            case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().subtract(transactionEntity.getAmountNative());
+            case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().add(transactionEntity.getAmountNative());
+        };
+
+        account.setCurrentBalance(revertCurrentBalance);
+        accountRepository.save(account);
+
+        transactionRepository.delete(transactionEntity);
+
+        return new TransactionCreateUpdateResponse("Transaction successfully deleted.", transactionEntity.getTransactionId());
+    }
+
+
 }
