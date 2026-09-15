@@ -12,8 +12,10 @@ import com.monetrax.monetrax.categories.mapper.CategoryMapper;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
 import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.*;
+import com.monetrax.monetrax.transactions.exceptions.IllegalStateDeletionException;
 import com.monetrax.monetrax.transactions.exceptions.InvalidTransactionCreationException;
 import com.monetrax.monetrax.transactions.exceptions.MissingTransactionLikeEntityException;
+import com.monetrax.monetrax.transactions.exceptions.MissingTransactionUpdatedFieldsException;
 import com.monetrax.monetrax.transactions.mapper.GlobalTransactionMapper;
 import com.monetrax.monetrax.transactions.repository.TransactionAdditionalInfoRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
@@ -65,7 +67,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Builder
     @NoArgsConstructor
     @Data
-    class CategoryRelatedData {
+    static class CategoryRelatedData {
         List<CategoryEntity> listOfAllAvailableCategories;
         Map<UUID, CategoryEntity> categoryEntityMap;
         Set<RequestedCategoryInformation> requestedCategoryInformationSet;
@@ -137,7 +139,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public ListOfAccountTransactions getAccountTransactions(UUID accountId, UUID userId) {
-        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
+        AccountEntity account = accountRepository.findAccountNonLock(userId, accountId).orElseThrow(()->{
             return new NoSuchAccountFound("No such account exists!");
         });
 
@@ -302,7 +304,7 @@ public class TransactionServiceImpl implements TransactionService {
                 && (transactionUpdate.getCategories() == null
                 || transactionUpdate.getCategories().isEmpty())) {
 
-            throw new RuntimeException("At least one field needs to be provided.");
+            throw new MissingTransactionUpdatedFieldsException("At least one field needs to be provided.");
         }
 
         //fetch transaction
@@ -333,7 +335,7 @@ public class TransactionServiceImpl implements TransactionService {
             List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
             int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
             if (num_of_deleted != transactionCategoriesEntityList.size()) {
-                throw new IllegalStateException("Category deletion count mismatch for transaction " + transactionId);
+                throw new IllegalStateDeletionException("Category deletion count mismatch for transaction " + transactionId);
             }
 
             // update with new ones
@@ -415,7 +417,7 @@ public class TransactionServiceImpl implements TransactionService {
         List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
         int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
         if (num_of_deleted != transactionCategoriesEntityList.size()) {
-            throw new IllegalStateException("Category deletion count mismatch for transaction " + transactionId);
+            throw new IllegalStateDeletionException("Category deletion count mismatch for transaction " + transactionId);
         }
 
         // Delete all additional info categories
@@ -423,7 +425,7 @@ public class TransactionServiceImpl implements TransactionService {
         if(!transactionAdditionalInfoEntities.isEmpty()){
             int num_of_deletion = transactionAdditionalInfoRepository.deleteAllTransactionAdditionalInfoByTransactionId(transactionId);
             if (num_of_deletion != transactionAdditionalInfoEntities.size()) {
-                throw new IllegalStateException("Additional information deletion count mismatch for transaction " + transactionId);
+                throw new IllegalStateDeletionException("Additional information deletion count mismatch for transaction " + transactionId);
             }
         }
 
@@ -432,7 +434,7 @@ public class TransactionServiceImpl implements TransactionService {
         if(!transactionLineItemsEntities.isEmpty()){
             int num_of_deletion = transactionLineItemsRepository.deleteAllTransactionLineItemsByTransactionId(transactionId);
             if (num_of_deletion != transactionLineItemsEntities.size()) {
-                throw new IllegalStateException("Line items deletion count mismatch for transaction " + transactionId);
+                throw new IllegalStateDeletionException("Line items deletion count mismatch for transaction " + transactionId);
             }
         }
 

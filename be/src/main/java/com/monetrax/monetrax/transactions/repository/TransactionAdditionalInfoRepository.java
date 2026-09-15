@@ -17,6 +17,9 @@ public interface TransactionAdditionalInfoRepository extends JpaRepository<Trans
     @Query("select t from TransactionAdditionalInfoEntity t where t.transaction.transactionId = ?1")
     public List<TransactionAdditionalInfoEntity> fetchAllTransactionsAdditionalInfo(UUID transactionId);
 
+    @Query("select t from TransactionAdditionalInfoEntity t where t.transaction.transactionId = ?1 and t.transactionInfoId = ?2")
+    public Optional<TransactionAdditionalInfoEntity> fetchByIds(UUID transactionId, UUID transactionInfoId);
+
     @Modifying
     @Query("delete from TransactionAdditionalInfoEntity t where t.transaction.transactionId = ?1")
     int deleteAllTransactionAdditionalInfoByTransactionId(UUID transactionId);

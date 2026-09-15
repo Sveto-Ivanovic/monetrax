@@ -12,6 +12,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "transaction_categories")
 public class TransactionCategoriesEntity {
     @EmbeddedId
     private TransactionCategoriesEmbeddable id;

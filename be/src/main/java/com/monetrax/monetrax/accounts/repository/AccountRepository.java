@@ -27,6 +27,9 @@ public interface AccountRepository extends JpaRepository<AccountEntity, UUID> {
     @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
     Optional<AccountEntity> getAccount(UUID userId, UUID accountId);
 
+    @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
+    Optional<AccountEntity> findAccountNonLock(UUID userId, UUID accountId);
+
     @Query("Select a.archived from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
     Optional<Boolean> isAccountArchived(UUID userId, UUID accountId);
 }

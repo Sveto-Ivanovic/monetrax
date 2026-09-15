@@ -10,7 +10,8 @@ CREATE TABLE categories_table (
 
                                   CONSTRAINT category_type_check
                                       CHECK (category_type IN (
-                                          'INCOME', 'EXPENSE', 'TRANSFER', 'ADJUSTMENT'
+                                                               'INCOME', 'EXPENSE', 'TRANSFER_FROM',
+                                                               'ADJUSTMENT_PLUS', 'TRANSFER_TO', 'ADJUSTMENT_MINUS'
                                           )),
 
                                   CONSTRAINT set_foreign_key

@@ -4,8 +4,10 @@ import com.monetrax.monetrax.accounts.entity.AccountEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -15,6 +17,8 @@ import java.util.UUID;
 @Table(name = "transactions")
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class TransactionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

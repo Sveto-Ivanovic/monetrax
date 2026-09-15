@@ -12,6 +12,7 @@ import com.monetrax.monetrax.accounts.service.AccountService;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,7 +35,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AccountInformation getAccountInformation(UUID userId, UUID accountId) {
-        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
+        AccountEntity account = accountRepository.findAccountNonLock(userId, accountId).orElseThrow(()->{
            return new NoSuchAccountFound("No such account exists!");
         });
         return accountMapper.fromAccountEntityToAccountInformation(account);
@@ -69,6 +70,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public AccountInformation updateAccount(AccountUpdate accountUpdate, UUID accountId, UUID userId) {
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
             return new NoSuchAccountFound("No such account exists!");
@@ -92,6 +94,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public AccountInformation archiveAccount(UUID userId, UUID accountId, boolean archived) {
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
             return new NoSuchAccountFound("No such account exists!");

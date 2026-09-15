@@ -8,12 +8,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface TransactionLineItemsRepository extends JpaRepository<TransactionLineItemsEntity, UUID> {
     @Query("select t from TransactionLineItemsEntity t where t.transaction.transactionId = ?1")
     public List<TransactionLineItemsEntity> fetchAllTransactionsLineProducts(UUID transactionId);
+
+    @Query("select t from TransactionLineItemsEntity t where t.transaction.transactionId = ?1 and t.lineItemId = ?2")
+    public Optional<TransactionLineItemsEntity> fetchByIds(UUID transactionId, UUID lineItemId);
 
     @Modifying
     @Query("delete from TransactionLineItemsEntity t where t.transaction.transactionId = ?1")

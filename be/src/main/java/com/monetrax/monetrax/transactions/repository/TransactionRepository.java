@@ -14,7 +14,7 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, UUID> {
 
-    @Query("select t from TransactionEntity t where t.transactionId = ?1 or e.user.userId = ?2")
+    @Query("select t from TransactionEntity t where t.transactionId = ?1 or t.user.userId = ?2")
     public Optional<TransactionEntity> fetchUserTransaction(UUID transactionId, UUID userId);
 
     @Query("select t from TransactionEntity t where t.account.accountId = ?1")
