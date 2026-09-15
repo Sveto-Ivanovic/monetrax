@@ -70,7 +70,7 @@ public class GlobalTransactionMapper {
                 .conversionFactor(transactionEntity.getConversionFactor())
                 .nativeAmount(transactionEntity.getAmountNative())
                 .description(transactionEntity.getDescription())
-                .name(transactionEntity.getDescription())
+                .name(transactionEntity.getName())
                 .transactionId(transactionEntity.getTransactionId())
                 .additionalInfo(transactionAdditionalInfoInformation)
                 .lineItemsInformation(lineItemsInformation)

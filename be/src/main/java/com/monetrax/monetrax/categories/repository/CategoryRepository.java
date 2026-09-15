@@ -1,8 +1,10 @@
 package com.monetrax.monetrax.categories.repository;
 
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
-import com.monetrax.monetrax.user.entity.UserEntity;
+
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -21,4 +23,9 @@ public interface CategoryRepository  extends JpaRepository<CategoryEntity, UUID>
 
     @Query("select e.name from CategoryEntity e where e.defaultCategory = true or e.user.userId = ?1")
     public List<String> fetchUsersAndDefaultCategoriesNames(UUID userId);
+
+    @Modifying
+    @Transactional
+    @Query("delete from CategoryEntity e where e.defaultCategory = false")
+    public void deleteAllNoneDefaultCategories();
 }
