@@ -1,7 +1,9 @@
 package com.monetrax.monetrax.accounts.repository;
 
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
@@ -21,8 +23,12 @@ public interface AccountRepository extends JpaRepository<AccountEntity, UUID> {
     @Query("Select a from AccountEntity a where a.user.userId = ?1")
     List<AccountEntity> getAllAccounts(UUID userId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
     Optional<AccountEntity> getAccount(UUID userId, UUID accountId);
+
+    @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
+    Optional<AccountEntity> findAccountNonLock(UUID userId, UUID accountId);
 
     @Query("Select a.archived from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
     Optional<Boolean> isAccountArchived(UUID userId, UUID accountId);
