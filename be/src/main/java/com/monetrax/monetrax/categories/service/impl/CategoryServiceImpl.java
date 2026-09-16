@@ -3,11 +3,15 @@ package com.monetrax.monetrax.categories.service.impl;
 import com.monetrax.monetrax.categories.dto.*;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
+import com.monetrax.monetrax.categories.exceptions.ForbiddenCategoryDeletionException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.categories.mapper.CategoryMapper;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
 import com.monetrax.monetrax.categories.service.CategoryService;
+import com.monetrax.monetrax.transactions.entity.TransactionEntity;
+import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
+import com.monetrax.monetrax.transactions.repository.TransactionRepository;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
@@ -24,11 +28,15 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
     private final UserRepository userRepository;
+    private final TransactionRepository transactionRepository;
+    private final TransactionCategoriesRepository transactionCategoriesRepository;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, UserRepository userRepository){
+    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, UserRepository userRepository, TransactionRepository transactionRepository, TransactionCategoriesRepository transactionCategoriesRepository){
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
         this.userRepository = userRepository;
+        this.transactionRepository = transactionRepository;
+        this.transactionCategoriesRepository = transactionCategoriesRepository;
     }
 
     public CategoryInformation getCategory(UUID categoryId, UUID userId){
@@ -49,6 +57,16 @@ public class CategoryServiceImpl implements CategoryService {
 
     public CategoryDeletionSuccess deleteCategory(UUID categoryId, UUID userId){
         CategoryEntity resp =categoryRepository.fetchUsersCategory(categoryId, userId).orElseThrow(()->new NoSuchCategoryExistsException("No category with id: "+ categoryId));
+        List<TransactionEntity> transactionEntityList = transactionRepository.fetchAllUserTransactions(userId);
+        List<UUID> transactionUUIDs = transactionEntityList.stream()
+                        .map(TransactionEntity::getTransactionId)
+                        .toList();
+
+        int countOfOccurrencesOfCategoryInsideTransactions = transactionCategoriesRepository.countCategoriesInUserTransactions(transactionUUIDs, categoryId);
+        if(countOfOccurrencesOfCategoryInsideTransactions!=0){
+            throw new ForbiddenCategoryDeletionException("Category is used in %d transaction/s. Please remove them before deleting the category."
+                    .formatted(countOfOccurrencesOfCategoryInsideTransactions));
+        }
 
         categoryRepository.delete(resp);
         return new CategoryDeletionSuccess("Successfully deleted category.", true);

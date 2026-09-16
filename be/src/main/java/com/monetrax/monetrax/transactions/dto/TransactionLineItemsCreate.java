@@ -1,0 +1,27 @@
+package com.monetrax.monetrax.transactions.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TransactionLineItemsCreate {
+    @NotNull
+    @NotBlank(message = "Product name must be present.")
+    @Size(min = 4, max = 100, message = "Size of the Product name must be between 4 and 100 characters.")
+    private String productName;
+
+    @NotNull
+    @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
+    private BigDecimal amount;
+}

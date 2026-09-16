@@ -314,6 +314,7 @@ public class AccountControllerIntegrationTest {
                 .description("Updated description text.")
                 .institutionName("New Institution")
                 .accountNumberMasked("1234")
+                .toggleActivate(false)
                 .build();
 
         HttpEntity<AccountUpdate> updateEntity = new HttpEntity<>(update, authHeaders(this.authToken));
@@ -327,6 +328,7 @@ public class AccountControllerIntegrationTest {
         assertEquals("Updated description text.", updated.getDescription());
         assertEquals("New Institution", updated.getInstitutionName());
         assertEquals("1234", updated.getAccountNumberMasked());
+        assertEquals(false, updated.isActive());
         assertEquals(created.getAccountId(), updated.getAccountId());
     }
 

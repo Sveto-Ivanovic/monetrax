@@ -36,6 +36,7 @@ public class AccountEntity {
     @Column(name = "description")
     private String description;
 
+    @Builder.Default
     @Column(name = "current_balance", nullable = false, precision = 14, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
@@ -48,9 +49,11 @@ public class AccountEntity {
     @Column(name = "account_number_masked", length = 4)
     private String accountNumberMasked;
 
+    @Builder.Default
     @Column(name = "is_active")
     private boolean active = true;
 
+    @Builder.Default
     @Column(name = "is_archived")
     private boolean archived = false;
 

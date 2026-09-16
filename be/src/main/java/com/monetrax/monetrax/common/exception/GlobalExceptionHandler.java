@@ -4,8 +4,13 @@ import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
+import com.monetrax.monetrax.categories.exceptions.ForbiddenCategoryDeletionException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
+import com.monetrax.monetrax.transactions.exceptions.IllegalStateDeletionException;
+import com.monetrax.monetrax.transactions.exceptions.InvalidTransactionCreationException;
+import com.monetrax.monetrax.transactions.exceptions.MissingTransactionLikeEntityException;
+import com.monetrax.monetrax.transactions.exceptions.MissingTransactionUpdatedFieldsException;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
 import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
@@ -218,9 +223,41 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidAccountID"));
     }
 
+    @ExceptionHandler(MissingTransactionUpdatedFieldsException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMissingTransactionUpdatedFieldsException(MissingTransactionUpdatedFieldsException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "EnterFieldToUpdate"));
+    }
+
+    @ExceptionHandler(IllegalStateDeletionException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleIllegalStateDeletionException(IllegalStateDeletionException ex){
+        return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "MismatchFetchedAndDeletedEntities"));
+    }
+
+    @ExceptionHandler(InvalidTransactionCreationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidTransactionCreationException(InvalidTransactionCreationException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidQueryParams"));
+    }
+
+
+    @ExceptionHandler(MissingTransactionLikeEntityException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleMissingTransactionLikeEntityException(MissingTransactionLikeEntityException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "MissingTransactionLikeEntity"));
+    }
+
+
     @ExceptionHandler(CategoryAlreadyExistsException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleCategoryAlreadyExistsException(CategoryAlreadyExistsException ex){
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidCategoryName"));
+    }
+
+    @ExceptionHandler(ForbiddenCategoryDeletionException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleForbiddenCategoryDeletionException(ForbiddenCategoryDeletionException ex){
+        return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "RemoveCategoriesFromTransactions"));
     }
 }
