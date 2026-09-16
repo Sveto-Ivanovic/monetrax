@@ -16,11 +16,14 @@ public interface TransactionCategoriesRepository extends JpaRepository<Transacti
     @Query("select t from TransactionCategoriesEntity t where t.id.transactionId = ?1")
     public List<TransactionCategoriesEntity> fetchAllTransactionCategoryIds(UUID transactionId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("delete from TransactionCategoriesEntity t where t.id.transactionId = ?1")
     int deleteAllTransactionCategoriesByTransactionId(UUID transactionId);
 
     @Query("select t from TransactionCategoriesEntity t where t.id.transactionId in ?1")
     List<TransactionCategoriesEntity> fetchAllTransactionCategoryIdsIn(List<UUID> transactionIds);
+
+    @Query("select count(t) from TransactionCategoriesEntity t where t.id.transactionId = ?1")
+    public int countTransactionCategories(UUID transactionId);
 
 }

@@ -30,12 +30,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class TransactionServiceImpl implements TransactionService {
 
@@ -211,7 +213,6 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionCreateUpdateResponse createTransaction(TransactionCreate transactionCreate, UUID userId, UUID accountId) {
-
         // fetch user and account
         UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
@@ -332,9 +333,9 @@ public class TransactionServiceImpl implements TransactionService {
 
             // update the TransactionCategory table
             // First delete all the transactions
-            List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
+            int countOfCategories = transactionCategoriesRepository.countTransactionCategories(transactionId);
             int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
-            if (num_of_deleted != transactionCategoriesEntityList.size()) {
+            if (num_of_deleted != countOfCategories) {
                 throw new IllegalStateDeletionException("Category deletion count mismatch for transaction " + transactionId);
             }
 

@@ -10,10 +10,10 @@ import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.dto.FetchAllCategoriesResponse;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
-import com.monetrax.monetrax.transactions.dto.RequestedCategoryInformation;
-import com.monetrax.monetrax.transactions.dto.TransactionCreate;
-import com.monetrax.monetrax.transactions.dto.TransactionCreateUpdateResponse;
-import com.monetrax.monetrax.transactions.dto.TransactionInformation;
+import com.monetrax.monetrax.common.exception.ErrorResponse;
+import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
+import com.monetrax.monetrax.transactions.dto.*;
+import com.monetrax.monetrax.transactions.entity.AdjustmentKind;
 import com.monetrax.monetrax.transactions.repository.TransactionAdditionalInfoRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionLineItemsRepository;
@@ -37,10 +37,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -233,7 +233,6 @@ public class TransactionControllerIntegrationTest {
         ResponseEntity<AccountInformation> resGetAcc = restTemplate.exchange(
                 baseUrl + "/accounts/account/"+this.accountId, HttpMethod.GET, entityGet, AccountInformation.class);
 
-        log.info(fetched.toString());
         assertNotNull(fetched);
         assertEquals(transactionId, fetched.getTransactionId());
         assertEquals(transactionCreate.getName(), fetched.getName());
@@ -246,4 +245,210 @@ public class TransactionControllerIntegrationTest {
 
     }
 
+    @Test
+    public void createFetchAndUpdateTransactionSuccessIT() {
+        String baseUrl = "http://localhost:" + port;
+        HttpHeaders headers = authHeaders();
+
+        List<RequestedCategoryInformation> requestedCategoryInformationList = new ArrayList<>();
+
+        // this one is income, but two selected categories that match
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(this.listOfCategoriesThatAreNotDefault.get(1).getCategoryId(), this.listOfCategoriesThatAreNotDefault.get(1).getName()));
+        var cat2 = this.listOfAllAvailableCategories.stream()
+                .filter(x->x.getName().equals("Business Income"))
+                .collect(Collectors.toSet())
+                .iterator().next();
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(cat2.getCategoryId(), cat2.getName()));
+
+        TransactionCreate transactionCreate = TransactionCreate.builder()
+                .name("income")
+                .description("generous income")
+                .amount(new BigDecimal("1000"))
+                .currency(this.accountCurrency)
+                .categories(requestedCategoryInformationList)
+                .additionalInfo(List.of(new TransactionAdditionalInfoCreate(AdjustmentKind.ADDITION,"income from company x",new BigDecimal("1000.00"))))
+                .lineInformation(List.of())
+                .build();
+
+        HttpEntity<TransactionCreate> entityPost = new HttpEntity<>(transactionCreate, headers);
+        ResponseEntity<TransactionCreateUpdateResponse> res = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction/create",
+                HttpMethod.POST, entityPost, TransactionCreateUpdateResponse.class);
+
+
+        TransactionCreateUpdateResponse createResponse = res.getBody();
+        assertNotNull(createResponse);
+        UUID transactionId = createResponse.getTransactionId();
+        assertNotNull(transactionId);
+
+        HttpEntity<String> entityGet = new HttpEntity<>(headers);
+        ResponseEntity<TransactionInformation> resGet = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId + "/fetch",
+                HttpMethod.GET, entityGet, TransactionInformation.class);
+
+        assert resGet.getBody() != null;
+        assertEquals(2, resGet.getBody().getCategories().size());
+
+        // update
+        TransactionUpdate transactionUpdate = TransactionUpdate.builder()
+                .amount(new BigDecimal("800.00"))
+                .description("they lowered my salary!")
+                .categories(List.of(new RequestedCategoryInformation(this.listOfCategoriesThatAreNotDefault.get(1).getCategoryId(), this.listOfCategoriesThatAreNotDefault.get(1).getName())))
+                .build();
+
+        HttpEntity<TransactionUpdate> entityPut = new HttpEntity<>(transactionUpdate, headers);
+        ResponseEntity<TransactionCreateUpdateResponse> resPut = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" +transactionId + "/update",
+                HttpMethod.PUT, entityPut, TransactionCreateUpdateResponse.class);
+
+
+        ResponseEntity<TransactionInformation> resGet2 = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId + "/fetch",
+                HttpMethod.GET, entityGet, TransactionInformation.class);
+
+        assert resGet2.getBody() != null;
+        assertEquals(1, resGet2.getBody().getCategories().size());
+        assertEquals("they lowered my salary!", resGet2.getBody().getDescription());
+
+        ResponseEntity<AccountInformation> resGetAcc = restTemplate.exchange(
+                baseUrl + "/accounts/account/"+this.accountId, HttpMethod.GET, entityGet, AccountInformation.class);
+
+        assertEquals((new BigDecimal("200.00")).add(new BigDecimal("800.00")), resGetAcc.getBody().getCurrentBalance());
+    }
+
+    @Test
+    public void createFetchAndDeleteTransactionSuccessIT() {
+        String baseUrl = "http://localhost:" + port;
+        HttpHeaders headers = authHeaders();
+
+        List<RequestedCategoryInformation> requestedCategoryInformationList = new ArrayList<>();
+        // this one is expense
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(this.listOfCategoriesThatAreNotDefault.get(0).getCategoryId(), this.listOfCategoriesThatAreNotDefault.get(1).getName()));
+        var cat2 = this.listOfAllAvailableCategories.stream()
+                .filter(x->x.getName().equals("Utilities"))
+                .collect(Collectors.toSet())
+                .iterator().next();
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(cat2.getCategoryId(), cat2.getName()));
+
+        TransactionCreate transactionCreate = TransactionCreate.builder()
+                .name("Voli Store Purchase at 09/15/2026")
+                .description("Everyday supplies purchase at Voli store.")
+                .amount(new BigDecimal("3.00"))
+                .currency(this.accountCurrency)
+                .categories(requestedCategoryInformationList)
+                .additionalInfo(List.of())
+                .lineInformation(List.of(TransactionLineItemsCreate.builder().productName("Coca cola 1.5L").amount(new BigDecimal("3.00")).build()))
+                .build();
+
+        HttpEntity<TransactionCreate> entityPost = new HttpEntity<>(transactionCreate, headers);
+        ResponseEntity<TransactionCreateUpdateResponse> res = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction/create",
+                HttpMethod.POST, entityPost, TransactionCreateUpdateResponse.class);
+
+        TransactionCreateUpdateResponse createResponse = res.getBody();
+        assertNotNull(createResponse);
+        UUID transactionId = createResponse.getTransactionId();
+        assertNotNull(transactionId);
+
+        // get
+        HttpEntity<String> entityGet = new HttpEntity<>(headers);
+        ResponseEntity<TransactionInformation> resGet = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId + "/fetch",
+                HttpMethod.GET, entityGet, TransactionInformation.class);
+
+        assert resGet.getBody() != null;
+        assertEquals(2, resGet.getBody().getCategories().size());
+
+
+        // delete
+        HttpEntity<String> entityDelete = new HttpEntity<>(headers);
+        ResponseEntity<TransactionCreateUpdateResponse> resDelete = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId + "/delete",
+                HttpMethod.DELETE, entityDelete, TransactionCreateUpdateResponse.class);
+
+        // check
+
+        ResponseEntity<ErrorResponse> resGet2 = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId + "/fetch",
+                HttpMethod.GET, entityGet, ErrorResponse.class);
+
+        var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("No such transaction found !","MissingTransactionLikeEntity");
+        ErrorResponse expectedResponse = new ErrorResponse(400,expectedErrors);
+
+        assertEquals(expectedResponse, resGet2.getBody());
+
+
+        ResponseEntity<AccountInformation> resGetAcc = restTemplate.exchange(
+                baseUrl + "/accounts/account/"+this.accountId, HttpMethod.GET, entityGet, AccountInformation.class);
+        assertEquals((new BigDecimal("200.00")), resGetAcc.getBody().getCurrentBalance());
+
+    }
+
+    @Test
+    public void createTwoTransactionsAndFetchAllTransactionSuccessIT() {
+        String baseUrl = "http://localhost:" + port;
+        HttpHeaders headers = authHeaders();
+
+        List<RequestedCategoryInformation> requestedCategoryInformationList = new ArrayList<>();
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(this.listOfCategoriesThatAreNotDefault.get(0).getCategoryId(), this.listOfCategoriesThatAreNotDefault.get(1).getName()));
+        var cat2 = this.listOfAllAvailableCategories.stream()
+                .filter(x->x.getName().equals("Utilities"))
+                .collect(Collectors.toSet())
+                .iterator().next();
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(cat2.getCategoryId(), cat2.getName()));
+
+        List<RequestedCategoryInformation> requestedCategoryInformationList2 = new ArrayList<>();
+        requestedCategoryInformationList2.add(new RequestedCategoryInformation(this.listOfCategoriesThatAreNotDefault.get(1).getCategoryId(), this.listOfCategoriesThatAreNotDefault.get(1).getName()));
+        var cat3 = this.listOfAllAvailableCategories.stream()
+                .filter(x->x.getName().equals("Business Income"))
+                .collect(Collectors.toSet())
+                .iterator().next();
+        requestedCategoryInformationList2.add(new RequestedCategoryInformation(cat3.getCategoryId(), cat3.getName()));
+
+        TransactionCreate transactionCreate1 = TransactionCreate.builder()
+                .name("Voli Store Purchase at 09/15/2026")
+                .description("Everyday supplies purchase at Voli store.")
+                .amount(new BigDecimal("25.00"))
+                .currency(this.accountCurrency)
+                .categories(requestedCategoryInformationList)
+                .additionalInfo(List.of())
+                .lineInformation(List.of())
+                .build();
+
+
+        TransactionCreate transactionCreate2 = TransactionCreate.builder()
+                .name("Random Income")
+                .description("Income received from business")
+                .amount(new BigDecimal("900.00"))
+                .currency(this.accountCurrency)
+                .categories(requestedCategoryInformationList2)
+                .additionalInfo(List.of())
+                .lineInformation(List.of())
+                .build();
+
+        HttpEntity<TransactionCreate> entityPost = new HttpEntity<>(transactionCreate1, headers);
+        HttpEntity<TransactionCreate> entityPost2 = new HttpEntity<>(transactionCreate2, headers);
+
+        ResponseEntity<TransactionCreateUpdateResponse> res = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction/create",
+                HttpMethod.POST, entityPost, TransactionCreateUpdateResponse.class);
+
+        ResponseEntity<String> res2 = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction/create",
+                HttpMethod.POST, entityPost2, String.class);
+
+
+        // get
+        HttpEntity<String> entityGet = new HttpEntity<>(headers);
+        ResponseEntity<ListOfAccountTransactions> resGet = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/fetch",
+                HttpMethod.GET, entityGet, ListOfAccountTransactions.class);
+
+        assert resGet.getBody() != null;
+        assertEquals(2, resGet.getBody().getTransactions().size());
+
+        ResponseEntity<AccountInformation> resGetAcc = restTemplate.exchange(
+                baseUrl + "/accounts/account/"+this.accountId, HttpMethod.GET, entityGet, AccountInformation.class);
+        assertEquals((new BigDecimal("200.00").add(new BigDecimal("900")).subtract(new BigDecimal("25.00"))), resGetAcc.getBody().getCurrentBalance());
+    }
 }
