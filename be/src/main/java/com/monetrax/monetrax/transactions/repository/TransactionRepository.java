@@ -19,4 +19,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     @Query("select t from TransactionEntity t where t.account.accountId = ?1")
     public List<TransactionEntity> fetchAllAccountTransactions(UUID accountId);
+
+    @Query("select t from TransactionEntity t where t.user.userId = ?1")
+    public List<TransactionEntity> fetchAllUserTransactions(UUID userId);
 }

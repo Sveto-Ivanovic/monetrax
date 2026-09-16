@@ -4,6 +4,7 @@ import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
+import com.monetrax.monetrax.categories.exceptions.ForbiddenCategoryDeletionException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.transactions.exceptions.IllegalStateDeletionException;
@@ -252,5 +253,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleCategoryAlreadyExistsException(CategoryAlreadyExistsException ex){
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidCategoryName"));
+    }
+
+    @ExceptionHandler(ForbiddenCategoryDeletionException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleForbiddenCategoryDeletionException(ForbiddenCategoryDeletionException ex){
+        return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "RemoveCategoriesFromTransactions"));
     }
 }

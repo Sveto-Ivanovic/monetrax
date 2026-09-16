@@ -26,4 +26,7 @@ public interface TransactionCategoriesRepository extends JpaRepository<Transacti
     @Query("select count(t) from TransactionCategoriesEntity t where t.id.transactionId = ?1")
     public int countTransactionCategories(UUID transactionId);
 
+    @Query("select count(t) from TransactionCategoriesEntity t where t.id.transactionId in ?1 and t.id.categoryId = ?2")
+    public int countCategoriesInUserTransactions(List<UUID> transactionId, UUID categoryId);
+
 }
