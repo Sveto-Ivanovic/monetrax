@@ -1,4 +1,4 @@
-CREATE TYPE alert_rule_type  AS ENUM ('LESS_THAN', 'GREATER_THAN', 'BETWEEN', 'EQUAL', 'LESS', 'GREATER');
+CREATE TYPE alert_rule_type  AS ENUM ('LESS_OR_EQUAL', 'GREATER_OR_EQUAL', 'BETWEEN', 'EQUAL', 'LESS', 'GREATER');
 
 CREATE TABLE spending_alerts (
                                  alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
