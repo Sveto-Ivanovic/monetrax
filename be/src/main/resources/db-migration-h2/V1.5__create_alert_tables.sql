@@ -16,6 +16,7 @@ CREATE TABLE alert_conditions (
                                   condition_id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                   alert_id UUID NOT NULL,
                                   category_id UUID NOT NULL,
+                                  category_name VARCHAR(150) NOT NULL,
                                   rule_type ENUM('LESS_OR_EQUAL', 'GREATER_OR_EQUAL', 'BETWEEN', 'EQUAL', 'LESS', 'GREATER') NOT NULL,
                                   limit_value_low_or_equal NUMERIC(14,2) NOT NULL,
                                   limit_value_high NUMERIC(14,2),

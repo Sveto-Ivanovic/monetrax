@@ -16,6 +16,7 @@ CREATE TABLE alert_conditions (
                                   condition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                                   alert_id UUID NOT NULL REFERENCES spending_alerts(alert_id) ON DELETE CASCADE,
                                   category_id UUID NOT NULL REFERENCES categories_table(category_id),
+                                  category_name VARCHAR(150) NOT NULL,
                                   rule_type alert_rule_type NOT NULL,
                                   limit_value_low_or_equal NUMERIC(14,2) NOT NULL,
                                   limit_value_high NUMERIC(14,2),

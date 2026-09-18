@@ -31,6 +31,9 @@ public class AlertConditionEntity {
     @JoinColumn(name = "category_id")
     private CategoryEntity category;
 
+    @Column(name = "category_name")
+    private String categoryName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "rule_type", nullable = false)
     private RuleType ruleType;

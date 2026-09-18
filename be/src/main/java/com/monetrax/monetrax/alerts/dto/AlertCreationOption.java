@@ -1,0 +1,10 @@
+package com.monetrax.monetrax.alerts.dto;
+
+public enum AlertCreationOption {
+    ADD_ALERT_FOR_EVERY_MONTH_IN_THE_CURRENT_YEAR,
+    ADD_ALERT_FOR_EVERY_MONTH_IN_THE_NEXT_3_YEARS,
+    ADD_ALERT_FOR_NEXT_MONTH,
+    ADD_ALERT_FOR_NEXT_6_MONTHS,
+    ADD_ALERT_FOR_NEXT_3_MONTHS,
+    ADD_ALERT_FOR_NEXT_12_MONTHS
+}
