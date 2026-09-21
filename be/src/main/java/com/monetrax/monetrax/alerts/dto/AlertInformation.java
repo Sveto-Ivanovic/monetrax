@@ -27,5 +27,9 @@ public class AlertInformation {
 
     private List<AlertConditionInformation> filters;
 
+    private List<AlertState> alertStates;
+
     private boolean isBreached;
+
+    private boolean isActive;
 }

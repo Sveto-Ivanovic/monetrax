@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 
@@ -31,7 +32,7 @@ public class GlobalTransactionMapper {
                 .amount(transactionCreate.getAmount())
                 .amountNative(amountNative)
                 .categoryType(categoryKind)
-                .createdAt(OffsetDateTime.now())
+                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .currency(transactionCreate.getCurrency())
                 .description(transactionCreate.getDescription())
                 .name(transactionCreate.getName())

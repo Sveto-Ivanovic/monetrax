@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -72,7 +73,7 @@ public class UserServiceImpl implements UserService {
         Optional.ofNullable(userUpdate.getName()).ifPresent(user::setName);
         Optional.ofNullable(userUpdate.getSurname()).ifPresent(user::setSurname);
         Optional.ofNullable(userUpdate.getUserName()).ifPresent(user::setUserName);
-        user.setUpdatedAt(OffsetDateTime.now());
+        user.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         if(userUpdate.getUserEmail() != null && userRepository.existsUserEmail(userUpdate.getUserEmail()))
             throw new EmailAlreadyExistsException("Cannot update user with present email as the email already exists.");
@@ -94,7 +95,7 @@ public class UserServiceImpl implements UserService {
             throw new PasswordMismatchException("The new password must not be equal to the old one.");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setUpdatedAt(OffsetDateTime.now());
+        user.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
         userRepository.save(user);
         return new UserSuccessfulPasswordUpdate(true);
     }
