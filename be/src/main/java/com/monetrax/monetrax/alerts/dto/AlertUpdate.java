@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Builder
 @Data
@@ -23,4 +24,7 @@ public class AlertUpdate {
 
     @Size(min = 15, max = 250, message = "Size of the name must be between 4 and 50 characters.")
     private String description;
+
+    @NotNull
+    private List<AlertConditionCreation> filtersToCreate;
 }

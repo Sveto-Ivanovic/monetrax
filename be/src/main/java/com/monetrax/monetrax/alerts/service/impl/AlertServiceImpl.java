@@ -516,11 +516,12 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
+    @Transactional
     public AlertCreateUpdateDeleteResponse updateAlert(AlertUpdate alertUpdate, UUID alertId, UUID userId) {
 
         AlertEntity alertEntity = alertRepository.fetchAlert(alertId, userId).orElseThrow(()->new NoSuchAlertException("No such alert exists!"));
 
-        if (alertEntity.getDescription() == null && alertEntity.getName() == null) {
+        if (alertUpdate.getDescription() == null && alertUpdate.getName() == null && alertUpdate.getFiltersToCreate() == null) {
             throw new InvalidInputException("At least one field must be provided for update");
         }
 
@@ -529,7 +530,25 @@ public class AlertServiceImpl implements AlertService {
 
         alertEntity.setUpdatedAt(OffsetDateTime.now());
 
-        alertRepository.save(alertEntity);
+        var alertEntitySaved = alertRepository.save(alertEntity);
+
+        if(!(alertUpdate.getFiltersToCreate() == null)){
+            if(alertUpdate.getFiltersToCreate().isEmpty())
+                throw new IllegalArgumentException("Number of filters must be one or more.");
+
+            List<AlertConditionEntity> alertConditionEntityListToDelete = alertConditionRepository.fetchAlertsConditions(alertEntity.getAlertId());
+
+            alertConditionRepository.deleteAll(alertConditionEntityListToDelete);
+            // get all available categories to the user
+            List<CategoryEntity> listOfAllCategories = categoryRepository.fetchUsersAndDefaultCategories(true,userId);
+            List<UUID> listOfAllCategoryIds = listOfAllCategories.stream().map(CategoryEntity::getCategoryId).toList();
+            // categoryId to CategoryEntities
+            Map<UUID, CategoryEntity> categoryMap = listOfAllCategories.stream()
+                    .collect(Collectors.toMap(CategoryEntity::getCategoryId, x->x));
+
+            List<AlertConditionEntity> alertConditionEntityList =
+                    saveFiltersForAlerts(List.of(alertEntitySaved), alertUpdate.getFiltersToCreate(), categoryMap, listOfAllCategoryIds);
+        }
 
         return new AlertCreateUpdateDeleteResponse("Successfully updated alert.", alertEntity.getAlertId());
     }
