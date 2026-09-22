@@ -14,6 +14,8 @@ import com.monetrax.monetrax.alerts.repository.AlertConditionRepository;
 import com.monetrax.monetrax.alerts.repository.AlertRepository;
 import com.monetrax.monetrax.alerts.service.AlertService;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
+import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
+import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
 import com.monetrax.monetrax.categories.exceptions.NoSuchCategoryExistsException;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
 import com.monetrax.monetrax.transactions.entity.TransactionCategoriesEntity;
@@ -513,15 +515,38 @@ public class AlertServiceImpl implements AlertService {
 
     }
 
-
-    @Override
-    public AlertCreateUpdateDeleteResponse deleteAlert(UUID alertId, UUID userId) {
-        return null;
-    }
-
     @Override
     public AlertCreateUpdateDeleteResponse updateAlert(AlertUpdate alertUpdate, UUID alertId, UUID userId) {
-        return null;
+
+        AlertEntity alertEntity = alertRepository.fetchAlert(alertId, userId).orElseThrow(()->new NoSuchAlertException("No such alert exists!"));
+
+        if (alertEntity.getDescription() == null && alertEntity.getName() == null) {
+            throw new InvalidInputException("At least one field must be provided for update");
+        }
+
+        Optional.ofNullable(alertUpdate.getDescription()).ifPresent(alertEntity::setDescription);
+        Optional.ofNullable(alertUpdate.getName()).ifPresent(alertEntity::setName);
+
+        alertEntity.setUpdatedAt(OffsetDateTime.now());
+
+        alertRepository.save(alertEntity);
+
+        return new AlertCreateUpdateDeleteResponse("Successfully updated alert.", alertEntity.getAlertId());
     }
+
+    @Override
+    @Transactional
+    public AlertCreateUpdateDeleteResponse deleteAlert(UUID alertId, UUID userId) {
+
+        AlertEntity alertEntity = alertRepository.fetchAlert(alertId, userId).orElseThrow(()->new NoSuchAlertException("No such alert exists!"));
+
+        List<AlertConditionEntity> alertConditionEntityList = alertConditionRepository.fetchAlertsConditions(alertEntity.getAlertId());
+
+        alertConditionRepository.deleteAll(alertConditionEntityList);
+        alertRepository.delete(alertEntity);
+
+        return new AlertCreateUpdateDeleteResponse("Successfully deleted alert.", alertEntity.getAlertId());
+    }
+
 
 }
