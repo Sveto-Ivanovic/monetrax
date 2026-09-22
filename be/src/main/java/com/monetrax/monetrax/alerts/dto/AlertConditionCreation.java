@@ -1,6 +1,8 @@
 package com.monetrax.monetrax.alerts.dto;
 
 import com.monetrax.monetrax.alerts.entity.RuleType;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,11 +16,17 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AlertConditionCreation {
+    @NotNull
     private UUID categoryId;
 
+    @NotNull
     private RuleType ruleType;
 
+    @NotNull
+    @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
     private BigDecimal limitValueLowOrEqual;
 
+    @NotNull
+    @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
     private BigDecimal limitValueHigh;
 }

@@ -1,6 +1,8 @@
 package com.monetrax.monetrax.alerts.service.impl;
 
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
+import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
+import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.alerts.dto.*;
 import com.monetrax.monetrax.alerts.entity.AlertConditionEntity;
 import com.monetrax.monetrax.alerts.entity.AlertEntity;
@@ -18,7 +20,10 @@ import com.monetrax.monetrax.transactions.entity.TransactionCategoriesEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionRepository;
+import com.monetrax.monetrax.user.entity.UserEntity;
+import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,10 +32,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -45,8 +49,9 @@ public class AlertServiceImpl implements AlertService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionCategoriesRepository transactionCategoriesRepository;
+    private final AccountRepository accountRepository;
 
-    public AlertServiceImpl(AlertRepository alertRepository, AlertConditionRepository alertConditionRepository, AlertMapper alertMapper, CategoryRepository categoryRepository, UserRepository userRepository, TransactionRepository transactionRepository, TransactionCategoriesRepository transactionCategoriesRepository) {
+    public AlertServiceImpl(AlertRepository alertRepository, AlertConditionRepository alertConditionRepository, AlertMapper alertMapper, CategoryRepository categoryRepository, UserRepository userRepository, TransactionRepository transactionRepository, TransactionCategoriesRepository transactionCategoriesRepository, AccountRepository accountRepository) {
         this.alertRepository = alertRepository;
         this.alertConditionRepository = alertConditionRepository;
         this.alertMapper = alertMapper;
@@ -54,6 +59,7 @@ public class AlertServiceImpl implements AlertService {
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
+        this.accountRepository = accountRepository;
     }
 
     @Data
@@ -259,6 +265,124 @@ public class AlertServiceImpl implements AlertService {
 
     }
 
+
+    private List<AlertConditionEntity> saveFiltersForAlerts(List<AlertEntity> listOfAlerts,
+                                      List<AlertConditionCreation> filtersToCreate,
+                                      Map<UUID, CategoryEntity> categoryMap,
+                                      List<UUID> listOfAllCategoryIds
+                                      ){
+        // Note the alerts need to be saved first
+        // check validity of filters
+        Set<UUID> categoryIds = new HashSet<>();
+        filtersToCreate.forEach(x->{
+            UUID categoryId = x.getCategoryId();
+
+            if (!categoryIds.add(categoryId)) {
+                throw new IllegalStateException(
+                        "Duplicate category ID in filters: " + categoryId
+                );
+            }
+
+            if (!listOfAllCategoryIds.contains(categoryId)) {
+                throw new IllegalStateException(
+                        "The category selected in the filter is invalid."
+                );
+            }
+
+            RuleType rule = x.getRuleType();
+            boolean needLowEqual = rule == RuleType.LESS_OR_EQUAL
+                    || rule == RuleType.LESS
+                    || rule == RuleType.EQUAL
+                    || rule == RuleType.BETWEEN;
+
+            boolean needHigh = rule == RuleType.GREATER_OR_EQUAL
+                    || rule == RuleType.GREATER
+                    || rule == RuleType.BETWEEN;
+
+            if (needLowEqual && x.getLimitValueLowOrEqual() == null)
+                throw new InvalidInputException("The lower/equal comparison value needs to be non null.");
+
+            if (needHigh && x.getLimitValueHigh() == null)
+                throw new InvalidInputException("The upper comparison value needs to be non null.");
+
+        });
+
+
+        List<AlertConditionEntity> alertConditionEntityList = new ArrayList<>();
+
+        for(var alert: listOfAlerts){
+        // here we will accumulate filters for the modes
+            for(var alertCondition: filtersToCreate){
+                alertConditionEntityList.add(
+                        alertMapper.fromAlertConditionCreateToAlertConditionEntity(alertCondition, alert, categoryMap.get(alertCondition.getCategoryId()))
+                );
+            }
+        }
+        return alertConditionRepository.saveAll(alertConditionEntityList);
+    }
+
+
+    private List<AlertEntity> createAlertsWithAlertCreationOptions(AlertEntity alertEntity,
+                                                                   AlertRecurrenceRule creationOption) {
+
+
+
+        List<AlertEntity> alertEntityList = new ArrayList<>();
+        alertEntityList.add(alertEntity);
+        String originalName = alertEntity.getName();
+
+        for(int i = 1; i<creationOption.getNumberOfOccurrences()+1; i++){
+            LocalDate dateFrom = alertEntityList.get(i-1).getDateFrom();
+            LocalDate dateTo = alertEntityList.get(i-1).getDateTo();
+            String currentName = originalName + " iteration_" + i;
+            int recurrenceNum = creationOption.getRecurrenceNum() > 0 ? creationOption.getRecurrenceNum(): 1;
+
+            LocalDate newDateFrom = switch (creationOption.getRuleType()){
+                case EVERY_WEEK -> dateFrom.plusWeeks(recurrenceNum);
+                case EVERY_MONTH -> {
+                    boolean isLastDayOfMonth = dateFrom.getDayOfMonth() == dateFrom.lengthOfMonth();
+                    yield isLastDayOfMonth
+                            ? dateFrom.plusMonths(recurrenceNum).with(TemporalAdjusters.lastDayOfMonth())
+                            : dateFrom.plusMonths(recurrenceNum);
+                }
+                case EVERY_YEAR -> dateFrom.plusYears(recurrenceNum);
+                case EVERY_SPAN -> {
+                    long daySpan = ChronoUnit.DAYS.between(dateFrom, dateTo);
+                    yield dateFrom.plusDays(daySpan+1);
+                }
+            };
+
+
+            LocalDate newDateTo = switch (creationOption.getRuleType()){
+                case EVERY_WEEK -> dateTo.plusWeeks(recurrenceNum);
+                case EVERY_MONTH -> {
+                    boolean isLastDayOfMonth = dateTo.getDayOfMonth() == dateTo.lengthOfMonth();
+                    yield isLastDayOfMonth
+                            ? dateTo.plusMonths(recurrenceNum).with(TemporalAdjusters.lastDayOfMonth())
+                            : dateTo.plusMonths(recurrenceNum);
+                }
+                case EVERY_YEAR -> dateTo.plusYears(recurrenceNum);
+                case EVERY_SPAN -> {
+                    long daySpan = ChronoUnit.DAYS.between(dateFrom, dateTo);
+                    yield dateTo.plusDays(daySpan+1);
+                }
+            };
+
+            alertEntityList.add(AlertEntity.builder()
+                    .name(currentName)
+                    .account(alertEntity.getAccount())
+                    .createdAt(OffsetDateTime.now())
+                    .dateFrom(newDateFrom)
+                    .dateTo(newDateTo)
+                    .description(alertEntity.getDescription())
+                    .updatedAt(OffsetDateTime.now())
+                    .user(alertEntity.getUser())
+                    .build()
+            );
+        }
+        return alertRepository.saveAll(alertEntityList);
+    }
+
     @Override
     public AlertInformation getAlert(UUID alertId, UUID userId) {
         // we fetch alert
@@ -346,14 +470,49 @@ public class AlertServiceImpl implements AlertService {
 
         }
 
-
         return responseList;
     }
 
     @Override
+    @Transactional
     public AlertCreateUpdateDeleteResponse createAlert(AlertCreate alertCreate, UUID userId, UUID accountId) {
-        return null;
+        if(alertCreate.getFiltersToCreate().isEmpty())
+            throw new IllegalArgumentException("Number of filters must be one or more.");
+
+        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
+        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
+            return new NoSuchAccountFound("No such account exists!");
+        });
+
+
+        // get all available categories to the user
+        List<CategoryEntity> listOfAllCategories = categoryRepository.fetchUsersAndDefaultCategories(true,userId);
+        List<UUID> listOfAllCategoryIds = listOfAllCategories.stream().map(CategoryEntity::getCategoryId).toList();
+        // categoryId to CategoryEntities
+        Map<UUID, CategoryEntity> categoryMap = listOfAllCategories.stream()
+                .collect(Collectors.toMap(CategoryEntity::getCategoryId, x->x));
+
+
+        AlertEntity alert = alertMapper.fromAlertCreateToAlertEntity(alertCreate, account, user);
+        if(alert.getDateFrom().isAfter(alert.getDateTo()))
+            throw  new IllegalArgumentException("The begging date must come before the end date.");
+
+        if(alertCreate.getAlertRecurrenceRule()!=null){
+            // here logic to add the multi alertEntities
+            List<AlertEntity> alertEntityListSaved = createAlertsWithAlertCreationOptions(alert, alertCreate.getAlertRecurrenceRule());
+            List<AlertConditionEntity> alertConditionEntityList =
+                    saveFiltersForAlerts(alertEntityListSaved, alertCreate.getFiltersToCreate(), categoryMap, listOfAllCategoryIds);
+            return new AlertCreateUpdateDeleteResponse("Successfully created %d alerts.".formatted(alertEntityListSaved.size()), null);
+        }
+        else {
+            AlertEntity alertEntitySaved = alertRepository.save(alert);
+            List<AlertConditionEntity> alertConditionEntityList =
+                    saveFiltersForAlerts(List.of(alertEntitySaved), alertCreate.getFiltersToCreate(), categoryMap, listOfAllCategoryIds);
+            return new AlertCreateUpdateDeleteResponse("Successfully created alert.", alertEntitySaved.getAlertId());
+        }
+
     }
+
 
     @Override
     public AlertCreateUpdateDeleteResponse deleteAlert(UUID alertId, UUID userId) {
