@@ -18,7 +18,13 @@ CREATE TABLE alert_conditions (
                                   category_id UUID NOT NULL REFERENCES categories_table(category_id),
                                   category_name VARCHAR(150) NOT NULL,
                                   rule_type alert_rule_type NOT NULL,
-                                  limit_value_low_or_equal NUMERIC(14,2) NOT NULL,
+                                  limit_value_low_or_equal NUMERIC(14,2),
                                   limit_value_high NUMERIC(14,2),
-                                  UNIQUE (alert_id, category_id)
+                                  UNIQUE (alert_id, category_id),
+                                  CONSTRAINT chk_alert_conditions_limits
+                                      CHECK (
+                                          (limit_value_low_or_equal IS NULL AND limit_value_high IS NOT NULL)
+                                              OR
+                                          (limit_value_low_or_equal IS NOT NULL AND limit_value_high IS NULL)
+                                          )
 );

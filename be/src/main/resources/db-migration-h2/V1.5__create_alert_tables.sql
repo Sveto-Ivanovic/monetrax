@@ -18,9 +18,18 @@ CREATE TABLE alert_conditions (
                                   category_id UUID NOT NULL,
                                   category_name VARCHAR(150) NOT NULL,
                                   rule_type ENUM('LESS_OR_EQUAL', 'GREATER_OR_EQUAL', 'BETWEEN', 'EQUAL', 'LESS', 'GREATER') NOT NULL,
-                                  limit_value_low_or_equal NUMERIC(14,2) NOT NULL,
+                                  limit_value_low_or_equal NUMERIC(14,2),
                                   limit_value_high NUMERIC(14,2),
                                   CONSTRAINT fk_alert_conditions_alert FOREIGN KEY (alert_id) REFERENCES spending_alerts(alert_id) ON DELETE CASCADE,
                                   CONSTRAINT fk_alert_conditions_category FOREIGN KEY (category_id) REFERENCES categories_table(category_id),
-                                  CONSTRAINT uq_alert_conditions_alert_category UNIQUE (alert_id, category_id)
+                                  CONSTRAINT uq_alert_conditions_alert_category UNIQUE (alert_id, category_id),
+                                  CONSTRAINT  chk_alert_conditions_limits
+                                      CHECK (
+                                          (limit_value_low_or_equal IS NULL AND limit_value_high IS NOT NULL)
+                                              OR
+                                          (limit_value_low_or_equal IS NOT NULL AND limit_value_high IS NULL)
+                                              OR
+                                          (limit_value_low_or_equal IS NOT NULL AND limit_value_high IS NOT NULL)
+                                          )
+
 );

@@ -2,6 +2,8 @@ package com.monetrax.monetrax.common.exception;
 
 import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
+import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
+import com.monetrax.monetrax.alerts.exceptions.NoSuchAlertException;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
 import com.monetrax.monetrax.categories.exceptions.ForbiddenCategoryDeletionException;
@@ -260,4 +262,24 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleForbiddenCategoryDeletionException(ForbiddenCategoryDeletionException ex){
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "RemoveCategoriesFromTransactions"));
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleIllegalStateException(IllegalStateException ex){
+        return new ErrorResponse(HttpStatus.FORBIDDEN.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InternalStateError"));
+    }
+
+
+    @ExceptionHandler(InvalidInputException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidInputException(InvalidInputException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidRequestParams"));
+    }
+
+    @ExceptionHandler(NoSuchAlertException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleNoSuchAlertException(NoSuchAlertException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidRequestParams"));
+    }
+
 }

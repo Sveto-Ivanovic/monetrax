@@ -30,6 +30,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -42,6 +43,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class AlertServiceImpl implements AlertService {
 
     private final AlertRepository alertRepository;
@@ -373,11 +375,11 @@ public class AlertServiceImpl implements AlertService {
             alertEntityList.add(AlertEntity.builder()
                     .name(currentName)
                     .account(alertEntity.getAccount())
-                    .createdAt(OffsetDateTime.now())
+                    .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                     .dateFrom(newDateFrom)
                     .dateTo(newDateTo)
                     .description(alertEntity.getDescription())
-                    .updatedAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                     .user(alertEntity.getUser())
                     .build()
             );
@@ -397,7 +399,7 @@ public class AlertServiceImpl implements AlertService {
         List<UUID> categoriesInTheAlert = alertConditionInformations.stream().map(AlertConditionInformation::getCategoryId).toList();
 
         // check if the alert is active
-        LocalDate dateNow = LocalDate.now();
+        LocalDate dateNow = LocalDate.now(ZoneOffset.UTC);
         boolean isActive = !dateNow.isBefore(alertEntity.getDateFrom()) && !dateNow.isAfter(alertEntity.getDateTo());
 
         // get all transactions inside the specified alert date, we need this to get only transactions inside the specified date alert is valid in
@@ -418,9 +420,11 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
-    public List<AlertInformation> getAccountAlerts(UUID accountId, UUID userId) {
+    public List<AlertInformation> getAccountAlerts(UUID accountId, UUID userId, boolean includeOnlyActiveAlerts) {
         // we fetch alerts
-        List<AlertEntity> alertEntities = alertRepository.fetchAlertsByAccountId(accountId, userId);
+        List<AlertEntity> alertEntities = includeOnlyActiveAlerts ?
+                alertRepository.fetchAlertsByAccountIdThatAreActive(accountId, userId, LocalDate.now(ZoneOffset.UTC)) :
+                alertRepository.fetchAlertsByAccountId(accountId, userId);
         if(alertEntities.isEmpty())
             return List.of();
 
@@ -447,7 +451,7 @@ public class AlertServiceImpl implements AlertService {
 
         for(var alert: alertEntities){
             // check if the alert is active
-            LocalDate dateNow = LocalDate.now();
+            LocalDate dateNow = LocalDate.now(ZoneOffset.UTC);
             boolean isActive = !dateNow.isBefore(alert.getDateFrom()) && !dateNow.isAfter(alert.getDateTo());
 
             // get all transactions inside the specified alert date, we need this to get only transactions inside the specified date alert is valid in
@@ -528,7 +532,7 @@ public class AlertServiceImpl implements AlertService {
         Optional.ofNullable(alertUpdate.getDescription()).ifPresent(alertEntity::setDescription);
         Optional.ofNullable(alertUpdate.getName()).ifPresent(alertEntity::setName);
 
-        alertEntity.setUpdatedAt(OffsetDateTime.now());
+        alertEntity.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         var alertEntitySaved = alertRepository.save(alertEntity);
 

@@ -29,7 +29,7 @@ public class AlertInformation {
 
     private List<AlertState> alertStates;
 
-    private boolean isBreached;
+    private boolean breached;
 
-    private boolean isActive;
+    private boolean active;
 }

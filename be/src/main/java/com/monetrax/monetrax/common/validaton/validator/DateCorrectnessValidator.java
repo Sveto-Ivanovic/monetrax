@@ -5,6 +5,7 @@ import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.chrono.ChronoLocalDate;
 import java.time.temporal.ChronoUnit;
 
@@ -28,7 +29,7 @@ public class DateCorrectnessValidator implements ConstraintValidator<DateCorrect
 
     @Override
     public boolean isValid(LocalDate localDate, ConstraintValidatorContext ctx) {
-        LocalDate localDateNow = LocalDate.now();
+        LocalDate localDateNow = LocalDate.now(ZoneOffset.UTC);
         long diff;
         return localDate == null || switch(filter){
             case YEARS -> {

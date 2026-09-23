@@ -6,23 +6,27 @@ import com.monetrax.monetrax.alerts.entity.AlertConditionEntity;
 import com.monetrax.monetrax.alerts.entity.AlertEntity;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.user.entity.UserEntity;
+import jdk.jfr.Category;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+@Component
 public class AlertMapper {
     public AlertInformation fromAlertEntityToAlertInformation(AlertEntity alertEntity, List<AlertConditionInformation> filters,
                                                               List<AlertState> alertStates, boolean  isBreached, boolean isActive){
         return AlertInformation.builder()
                 .alertId(alertEntity.getAlertId())
-                .isActive(isActive)
+                .active(isActive)
                 .alertStates(alertStates)
                 .dateFrom(alertEntity.getDateFrom())
                 .dateTo(alertEntity.getDateTo())
                 .description(alertEntity.getDescription())
                 .filters(filters)
-                .isBreached(isBreached)
+                .breached(isBreached)
                 .name(alertEntity.getName())
                 .build();
     }
