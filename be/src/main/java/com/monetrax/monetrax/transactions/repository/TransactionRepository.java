@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,4 +23,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     @Query("select t from TransactionEntity t where t.user.userId = ?1")
     public List<TransactionEntity> fetchAllUserTransactions(UUID userId);
+
+    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt <= ?4")
+    public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDate(UUID userId, UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
 }

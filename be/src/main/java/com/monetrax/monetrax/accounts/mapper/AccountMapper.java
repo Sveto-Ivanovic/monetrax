@@ -7,6 +7,7 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @Component
@@ -30,8 +31,8 @@ public class AccountMapper {
                 .accountNumberMasked(accountCreate.getAccountNumberMasked())
                 .active(true)
                 .archived(false)
-                .createdAt(OffsetDateTime.now())
-                .updatedAt(OffsetDateTime.now())
+                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .currency(accountCreate.getCurrency())
                 .currentBalance(accountCreate.getInitialBalance())
                 .description(accountCreate.getDescription())

@@ -7,6 +7,7 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -26,8 +27,8 @@ public class CategoryMapper {
     public CategoryEntity fromCategoryCreateToCategoryEntity(CategoryCreate toCreate, UserEntity userEntity){
         return CategoryEntity.builder()
                 .categoryType(toCreate.getCategoryType())
-                .createdAt(OffsetDateTime.now())
-                .updatedAt(OffsetDateTime.now())
+                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .description(toCreate.getDescription()==null? "No description provided.": toCreate.getDescription())
                 .name(toCreate.getName())
                 .defaultCategory(false)

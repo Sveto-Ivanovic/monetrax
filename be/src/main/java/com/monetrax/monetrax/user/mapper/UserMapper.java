@@ -6,6 +6,7 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Component
 public class UserMapper {
@@ -38,8 +39,8 @@ public class UserMapper {
                 .hasVerifiedEmail(true)
                 .additionalInfo("{}")
                 .passwordHash(passwordHash)
-                .createdAt(OffsetDateTime.now())
-                .updatedAt(OffsetDateTime.now())
+                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                 .build();
     }
 

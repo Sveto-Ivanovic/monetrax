@@ -18,6 +18,7 @@ import com.monetrax.monetrax.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -87,7 +88,7 @@ public class CategoryServiceImpl implements CategoryService {
         Optional.ofNullable(categoryToUpdate.getDescription()).ifPresent(resp::setDescription);
         Optional.ofNullable(categoryToUpdate.getName()).ifPresent(resp::setName);
 
-        resp.setUpdatedAt(OffsetDateTime.now());
+        resp.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
 
         CategoryEntity savedCategory = categoryRepository.save(resp);
 
