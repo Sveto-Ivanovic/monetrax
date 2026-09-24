@@ -8,6 +8,7 @@ import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.TransactionAdditionalInfoEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionLineItemsEntity;
+import com.monetrax.monetrax.transactions.entity.TransactionRecurrenceRuleEntity;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +26,10 @@ public class GlobalTransactionMapper {
                                                                       BigDecimal amountNative,
                                                                       CategoryKind categoryKind,
                                                                       BigDecimal conversionFactor){
+
+        OffsetDateTime creationDate = transactionCreate.getCustomCreationDate() == null
+                ? OffsetDateTime.now(ZoneOffset.UTC)
+                : transactionCreate.getCustomCreationDate().withOffsetSameInstant(ZoneOffset.UTC);
         return TransactionEntity.builder()
                 .user(userEntity)
                 .account(accountEntity)
@@ -32,7 +37,7 @@ public class GlobalTransactionMapper {
                 .amount(transactionCreate.getAmount())
                 .amountNative(amountNative)
                 .categoryType(categoryKind)
-                .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                .createdAt(creationDate)
                 .currency(transactionCreate.getCurrency())
                 .description(transactionCreate.getDescription())
                 .name(transactionCreate.getName())
@@ -110,6 +115,24 @@ public class GlobalTransactionMapper {
                 .name(transactionEntity.getName())
                 .transactionId(transactionEntity.getTransactionId())
                 .build();
+    }
+
+
+    public TransactionRecurrenceInformation fromTransactionEntityAndTransactionRecurrenceRuleEntityToTransactionRecurrenceInformation(TransactionEntity transactionEntity, TransactionRecurrenceRuleEntity transactionRecurrenceRuleEntity){
+
+        return TransactionRecurrenceInformation.builder()
+                .description(transactionEntity.getDescription())
+                .name(transactionEntity.getName())
+                .transactionId(transactionEntity.getTransactionId())
+                .intervalCount(transactionRecurrenceRuleEntity.getIntervalCount())
+                .lastRunDate(transactionRecurrenceRuleEntity.getLastRunDate())
+                .maxOccurrences(transactionRecurrenceRuleEntity.getMaxOccurrences())
+                .nextRunDate(transactionRecurrenceRuleEntity.getNextRunDate())
+                .occurrencesGenerated(transactionRecurrenceRuleEntity.getOccurrencesGenerated())
+                .recurrenceRuleId(transactionRecurrenceRuleEntity.getRecurrenceRuleId())
+                .recurrenceUnit(transactionRecurrenceRuleEntity.getRecurrenceUnit())
+                .build();
+
     }
 
 }

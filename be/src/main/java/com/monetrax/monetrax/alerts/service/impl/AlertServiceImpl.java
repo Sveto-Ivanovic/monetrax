@@ -167,8 +167,14 @@ public class AlertServiceImpl implements AlertService {
                     ZoneOffset.UTC
             );
 
+            LocalDate minDate = LocalDate.now(ZoneOffset.UTC)
+                    .isBefore(alert.getDateTo())
+                    ? LocalDate.now(ZoneOffset.UTC)
+                    : alert.getDateTo();
+
+
             OffsetDateTime dateTo = OffsetDateTime.of(
-                    alert.getDateTo(),
+                    minDate,
                     LocalTime.of(23, 59),
                     ZoneOffset.UTC
             );
@@ -207,8 +213,13 @@ public class AlertServiceImpl implements AlertService {
                 ZoneOffset.UTC
         );
 
+        LocalDate minDate = LocalDate.now(ZoneOffset.UTC)
+                .isBefore(alertEntity.getDateTo())
+                ? LocalDate.now(ZoneOffset.UTC)
+                : alertEntity.getDateTo();
+
         OffsetDateTime dateTo = OffsetDateTime.of(
-                alertEntity.getDateTo(),
+                minDate,
                 LocalTime.of(23, 59),
                 ZoneOffset.UTC
         );

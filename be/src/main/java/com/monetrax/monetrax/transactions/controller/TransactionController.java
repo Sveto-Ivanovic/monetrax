@@ -2,8 +2,10 @@ package com.monetrax.monetrax.transactions.controller;
 
 import com.monetrax.monetrax.auth.security.CustomUserDetails;
 import com.monetrax.monetrax.transactions.dto.*;
+import com.monetrax.monetrax.transactions.entity.TransactionRecurrenceRuleEntity;
 import com.monetrax.monetrax.transactions.service.impl.TransactionAdditionalInfoServiceImpl;
 import com.monetrax.monetrax.transactions.service.impl.TransactionLineItemsServiceImpl;
+import com.monetrax.monetrax.transactions.service.impl.TransactionRecurrenceRuleServiceImpl;
 import com.monetrax.monetrax.transactions.service.impl.TransactionServiceImpl;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,11 +21,13 @@ public class TransactionController {
     private final TransactionServiceImpl transactionService;
     private final TransactionAdditionalInfoServiceImpl transactionAdditionalInfoService;
     private  final TransactionLineItemsServiceImpl transactionLineItemsService;
+    private  final TransactionRecurrenceRuleServiceImpl transactionRecurrenceRuleService;
 
-    public TransactionController(TransactionServiceImpl transactionService, TransactionAdditionalInfoServiceImpl transactionAdditionalInfoService, TransactionLineItemsServiceImpl transactionLineItemsService) {
+    public TransactionController(TransactionServiceImpl transactionService, TransactionAdditionalInfoServiceImpl transactionAdditionalInfoService, TransactionLineItemsServiceImpl transactionLineItemsService, TransactionRecurrenceRuleServiceImpl transactionRecurrenceRuleService) {
         this.transactionService = transactionService;
         this.transactionAdditionalInfoService = transactionAdditionalInfoService;
         this.transactionLineItemsService = transactionLineItemsService;
+        this.transactionRecurrenceRuleService = transactionRecurrenceRuleService;
     }
 
     @PostMapping("/account/{account_id}/transaction/create")
@@ -69,5 +73,16 @@ public class TransactionController {
     @DeleteMapping("/transaction/{transaction_id}/transaction-line-product/{transaction_line_id}")
     public ResponseEntity<TransactionCreateUpdateResponse> deleteTransactionLineProduct(@AuthenticationPrincipal CustomUserDetails customUserDetails, @PathVariable UUID transaction_id, @PathVariable UUID transaction_line_id){
         return ResponseEntity.ok().body(transactionLineItemsService.deleteTransactionLineItem( UUID.fromString(customUserDetails.getUserId()), transaction_line_id, transaction_id));
+    }
+
+
+    @GetMapping("/account/{account_id}/transaction-recurrence-rule/fetch")
+    public ResponseEntity<TransactionRecurrenceResponse> getAccountTransactionRules(@AuthenticationPrincipal CustomUserDetails customUserDetails, @PathVariable UUID account_id){
+        return ResponseEntity.ok().body(transactionRecurrenceRuleService.getAllTransactionRulesForAccount(account_id, UUID.fromString(customUserDetails.getUserId())));
+    }
+
+    @DeleteMapping("/transaction/{transaction_id}/transaction-recurrence-rule/{transaction_rule_id}")
+    public ResponseEntity<TransactionCreateUpdateResponse> deleteTransactionRecurrenceRule(@AuthenticationPrincipal CustomUserDetails customUserDetails, @PathVariable UUID transaction_id, @PathVariable UUID transaction_rule_id){
+        return ResponseEntity.ok().body(transactionRecurrenceRuleService.deleteTransactionRule(transaction_rule_id, transaction_id, UUID.fromString(customUserDetails.getUserId())));
     }
 }

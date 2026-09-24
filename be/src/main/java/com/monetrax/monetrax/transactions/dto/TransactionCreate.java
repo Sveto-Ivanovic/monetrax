@@ -1,8 +1,5 @@
 package com.monetrax.monetrax.transactions.dto;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +36,9 @@ public class TransactionCreate {
     @Size(min = 3, max = 3, message = "Size of the currency must be 3 characters.")
     private String currency;
 
+    @Past(message = "The creation date must be in the past.")
+    private OffsetDateTime customCreationDate;
+
     @NotNull
     private List<RequestedCategoryInformation> categories;
 
@@ -45,4 +47,6 @@ public class TransactionCreate {
 
     @NotNull
     private List<TransactionLineItemsCreate> lineInformation;
+
+    private TransactionRecurrenceRule transactionRecurrenceRule;
 }
