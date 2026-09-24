@@ -34,6 +34,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -450,5 +451,83 @@ public class TransactionControllerIntegrationTest {
         ResponseEntity<AccountInformation> resGetAcc = restTemplate.exchange(
                 baseUrl + "/accounts/account/"+this.accountId, HttpMethod.GET, entityGet, AccountInformation.class);
         assertEquals((new BigDecimal("200.00").add(new BigDecimal("900")).subtract(new BigDecimal("25.00"))), resGetAcc.getBody().getCurrentBalance());
+    }
+
+
+    @Test
+    public void createTransactionWithRecurrenceRuleFetchRulesAndDeleteRuleSuccessIT() {
+        String baseUrl = "http://localhost:" + port;
+        HttpHeaders headers = authHeaders();
+
+        List<RequestedCategoryInformation> requestedCategoryInformationList = new ArrayList<>();
+        // this one is expense
+        requestedCategoryInformationList.add(new RequestedCategoryInformation(
+                this.listOfCategoriesThatAreNotDefault.get(0).getCategoryId(),
+                this.listOfCategoriesThatAreNotDefault.get(0).getName()));
+
+        TransactionRecurrenceRule recurrenceRule = TransactionRecurrenceRule.builder()
+                .ruleType(TransactionRecurrenceType.MONTH)
+                .recurrenceNum(1)
+                .maxNumOfOccurrencesAllowed(12)
+                .build();
+
+        TransactionCreate transactionCreate = TransactionCreate.builder()
+                .name("Monthly Voli subscription")
+                .description("Recurring monthly purchase at Voli store.")
+                .amount(new BigDecimal("10.00"))
+                .currency(this.accountCurrency)
+                .categories(requestedCategoryInformationList)
+                .additionalInfo(List.of())
+                .lineInformation(List.of())
+                .transactionRecurrenceRule(recurrenceRule)
+                .build();
+
+        // create
+        HttpEntity<TransactionCreate> entityPost = new HttpEntity<>(transactionCreate, headers);
+        ResponseEntity<TransactionCreateUpdateResponse> res = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction/create",
+                HttpMethod.POST, entityPost, TransactionCreateUpdateResponse.class);
+
+        TransactionCreateUpdateResponse createResponse = res.getBody();
+        assertNotNull(createResponse);
+        UUID transactionId = createResponse.getTransactionId();
+        assertNotNull(transactionId);
+
+        // fetch all recurrence rules for the account
+        HttpEntity<String> entityGet = new HttpEntity<>(headers);
+        ResponseEntity<TransactionRecurrenceResponse> resRules = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction-recurrence-rule/fetch",
+                HttpMethod.GET, entityGet, TransactionRecurrenceResponse.class);
+
+        assertNotNull(resRules.getBody());
+        assertEquals(1, resRules.getBody().getList().size());
+
+        TransactionRecurrenceInformation ruleInfo = resRules.getBody().getList().get(0);
+        assertNotNull(ruleInfo.getRecurrenceRuleId());
+        assertEquals(transactionId, ruleInfo.getTransactionId());
+        assertEquals(TransactionRecurrenceType.MONTH, ruleInfo.getRecurrenceUnit());
+        assertEquals(1, ruleInfo.getIntervalCount());
+        assertEquals(12, ruleInfo.getMaxOccurrences());
+        assertEquals(0, ruleInfo.getOccurrencesGenerated());
+        assertEquals(LocalDate.now(ZoneOffset.UTC).plusMonths(1), ruleInfo.getNextRunDate());
+
+        // delete the rule
+        HttpEntity<String> entityDelete = new HttpEntity<>(headers);
+        ResponseEntity<TransactionCreateUpdateResponse> resDelete = restTemplate.exchange(
+                baseUrl + "/transactions/transaction/" + transactionId
+                        + "/transaction-recurrence-rule/" + ruleInfo.getRecurrenceRuleId(),
+                HttpMethod.DELETE, entityDelete, TransactionCreateUpdateResponse.class);
+
+        assertEquals(200, resDelete.getStatusCode().value());
+        assertNotNull(resDelete.getBody());
+        assertEquals("Successfully deleted the rule", resDelete.getBody().getMsg());
+
+        // fetch again, there should be no rules left
+        ResponseEntity<TransactionRecurrenceResponse> resRulesAfterDelete = restTemplate.exchange(
+                baseUrl + "/transactions/account/" + this.accountId + "/transaction-recurrence-rule/fetch",
+                HttpMethod.GET, entityGet, TransactionRecurrenceResponse.class);
+
+        assertNotNull(resRulesAfterDelete.getBody());
+        assertTrue(resRulesAfterDelete.getBody().getList().isEmpty());
     }
 }

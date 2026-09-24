@@ -17,10 +17,7 @@ import com.monetrax.monetrax.transactions.exceptions.InvalidTransactionCreationE
 import com.monetrax.monetrax.transactions.exceptions.MissingTransactionLikeEntityException;
 import com.monetrax.monetrax.transactions.exceptions.MissingTransactionUpdatedFieldsException;
 import com.monetrax.monetrax.transactions.mapper.GlobalTransactionMapper;
-import com.monetrax.monetrax.transactions.repository.TransactionAdditionalInfoRepository;
-import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
-import com.monetrax.monetrax.transactions.repository.TransactionLineItemsRepository;
-import com.monetrax.monetrax.transactions.repository.TransactionRepository;
+import com.monetrax.monetrax.transactions.repository.*;
 import com.monetrax.monetrax.transactions.service.TransactionService;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
@@ -34,6 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,8 +51,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountMapper accountMapper;
     private final AccountRepository accountRepository;
     private  final UserRepository userRepository;
+    private final TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -63,6 +64,7 @@ public class TransactionServiceImpl implements TransactionService {
         this.accountMapper = accountMapper;
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
+        this.transactionRecurrenceRuleRepository = transactionRecurrenceRuleRepository;
     }
 
     @AllArgsConstructor
@@ -213,11 +215,18 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionCreateUpdateResponse createTransaction(TransactionCreate transactionCreate, UUID userId, UUID accountId) {
+        log.info("Creating transaction for userId={}, accountId={}", userId, accountId);
+
         // fetch user and account
-        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
-        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(()->{
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("No user found with id={}", userId);
+            return new NoSuchUserExistsException("No user with id: " + userId);
+        });
+        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(() -> {
+            log.warn("No account found for userId={}, accountId={}", userId, accountId);
             return new NoSuchAccountFound("No such account exists!");
         });
+        log.debug("Fetched user and account successfully: userId={}, accountId={}", userId, accountId);
 
         // method for checking the validity of categories, getting category map categoryUUID - categoryEntity, Set/deduplication of the the categories
         // and shared category kind between all of the categories
@@ -225,7 +234,8 @@ public class TransactionServiceImpl implements TransactionService {
         Map<UUID, CategoryEntity> categoryEntityMap = categoryRelatedData.getCategoryEntityMap();
         Set<RequestedCategoryInformation> requestedCategoryInformationSet = categoryRelatedData.getRequestedCategoryInformationSet();
         CategoryKind categoryKind = categoryRelatedData.getCategoryKind();
-
+        log.debug("Validated categories: count={}, categoryKind={}", requestedCategoryInformationSet.size(), categoryKind);
+        log.info("CategoryKind: {}", categoryKind);
         //************************************************************************************************************************
         // conversion logic should be implemented bellow
         //************************************************************************************************************************
@@ -240,21 +250,22 @@ public class TransactionServiceImpl implements TransactionService {
                 categoryKind,
                 new BigDecimal("1.00"));
 
-        TransactionEntity transactionEntitySaved  = transactionRepository.save(transactionEntity);
-
+        TransactionEntity transactionEntitySaved = transactionRepository.save(transactionEntity);
+        log.info("Saved transaction with id={} for accountId={}", transactionEntitySaved.getTransactionId(), accountId);
 
         // save TransactionCategoryEntity
         List<TransactionCategoriesEntity> transactionCategoriesEntities = new ArrayList<>();
-        for(var x: requestedCategoryInformationSet){
+        for (var x : requestedCategoryInformationSet) {
             var tce = new TransactionCategoriesEmbeddable(transactionEntitySaved.getTransactionId(), x.getCategoryId());
             transactionCategoriesEntities.add(new TransactionCategoriesEntity(tce, transactionEntitySaved, categoryEntityMap.get(x.getCategoryId())));
         }
         transactionCategoriesRepository.saveAll(transactionCategoriesEntities);
+        log.debug("Saved {} transaction-category links for transactionId={}", transactionCategoriesEntities.size(), transactionEntitySaved.getTransactionId());
 
         // save TransactionAdditionalInfo
-        if(!transactionCreate.getAdditionalInfo().isEmpty()){
+        if (!transactionCreate.getAdditionalInfo().isEmpty()) {
             List<TransactionAdditionalInfoEntity> transactionAdditionalInfoEntities = new ArrayList<>();
-            for(var x: transactionCreate.getAdditionalInfo()){
+            for (var x : transactionCreate.getAdditionalInfo()) {
                 transactionAdditionalInfoEntities.add(TransactionAdditionalInfoEntity.builder()
                         .amount(x.getAmount())
                         .kind(x.getKind())
@@ -263,12 +274,15 @@ public class TransactionServiceImpl implements TransactionService {
                         .build());
             }
             transactionAdditionalInfoRepository.saveAll(transactionAdditionalInfoEntities);
+            log.debug("Saved {} additional info entries for transactionId={}", transactionAdditionalInfoEntities.size(), transactionEntitySaved.getTransactionId());
+        } else {
+            log.debug("No additional info to save for transactionId={}", transactionEntitySaved.getTransactionId());
         }
 
         // save TransactionLineProducts
-        if(!transactionCreate.getLineInformation().isEmpty()){
+        if (!transactionCreate.getLineInformation().isEmpty()) {
             List<TransactionLineItemsEntity> transactionLineItemsEntities = new ArrayList<>();
-            for(var x: transactionCreate.getLineInformation()){
+            for (var x : transactionCreate.getLineInformation()) {
                 transactionLineItemsEntities.add(TransactionLineItemsEntity.builder()
                         .amount(x.getAmount())
                         .productName(x.getProductName())
@@ -276,21 +290,49 @@ public class TransactionServiceImpl implements TransactionService {
                         .build());
             }
             transactionLineItemsRepository.saveAll(transactionLineItemsEntities);
+            log.debug("Saved {} line items for transactionId={}", transactionLineItemsEntities.size(), transactionEntitySaved.getTransactionId());
+        } else {
+            log.debug("No line items to save for transactionId={}", transactionEntitySaved.getTransactionId());
         }
 
         // finally update the account amount
+        BigDecimal previousBalance = account.getCurrentBalance();
         BigDecimal updatedCurrentBalance = switch (categoryKind) {
             case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().add(transactionEntitySaved.getAmountNative());
             case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().subtract(transactionEntitySaved.getAmountNative());
         };
 
         account.setCurrentBalance(updatedCurrentBalance);
+        account.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
         accountRepository.save(account);
+        log.info("Updated balance for accountId={}: {} -> {}", accountId, previousBalance, updatedCurrentBalance);
 
-        //*************************************************************************************************************************
-        // code for handling alerts
-        //*************************************************************************************************************************
+        if (transactionCreate.getTransactionRecurrenceRule() != null) {
 
+            LocalDate nextRun = switch (transactionCreate.getTransactionRecurrenceRule().getRuleType()) {
+                case DAY -> LocalDate.now(ZoneOffset.UTC).plusDays(transactionCreate.getTransactionRecurrenceRule().getRecurrenceNum());
+                case WEEK -> LocalDate.now(ZoneOffset.UTC).plusWeeks(transactionCreate.getTransactionRecurrenceRule().getRecurrenceNum());
+                case MONTH -> LocalDate.now(ZoneOffset.UTC).plusMonths(transactionCreate.getTransactionRecurrenceRule().getRecurrenceNum());
+                case YEAR -> LocalDate.now(ZoneOffset.UTC).plusYears(transactionCreate.getTransactionRecurrenceRule().getRecurrenceNum());
+            };
+
+            var transactionRule = TransactionRecurrenceRuleEntity.builder()
+                    .sourceTransaction(transactionEntitySaved)
+                    .intervalCount(transactionCreate.getTransactionRecurrenceRule().getRecurrenceNum())
+                    .lastRunDate(LocalDate.now(ZoneOffset.UTC))
+                    .maxOccurrences(transactionCreate.getTransactionRecurrenceRule().getMaxNumOfOccurrencesAllowed())
+                    .nextRunDate(nextRun)
+                    .occurrencesGenerated(0)
+                    .recurrenceUnit(transactionCreate.getTransactionRecurrenceRule().getRuleType())
+                    .build();
+
+            transactionRecurrenceRuleRepository.save(transactionRule);
+            log.info("Created recurrence rule for transactionId={}, nextRunDate={}", transactionEntitySaved.getTransactionId(), nextRun);
+        } else {
+            log.debug("No recurrence rule specified for transactionId={}", transactionEntitySaved.getTransactionId());
+        }
+
+        log.info("Transaction creation completed successfully for transactionId={}", transactionEntitySaved.getTransactionId());
         return new TransactionCreateUpdateResponse("Transaction successfully created.", transactionEntitySaved.getTransactionId());
     }
 
@@ -439,6 +481,10 @@ public class TransactionServiceImpl implements TransactionService {
             }
         }
 
+        // delete transaction recurrences
+        Optional<TransactionRecurrenceRuleEntity> transactionRecurrenceRuleEntity = transactionRecurrenceRuleRepository.fetchRuleWithTransactionId(transactionId);
+        transactionRecurrenceRuleEntity.ifPresent(transactionRecurrenceRuleRepository::delete);
+
         BigDecimal revertCurrentBalance = switch (transactionEntity.getCategoryType()) {
             case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().subtract(transactionEntity.getAmountNative());
             case EXPENSE, ADJUSTMENT_MINUS, TRANSFER_TO -> account.getCurrentBalance().add(transactionEntity.getAmountNative());
@@ -451,6 +497,5 @@ public class TransactionServiceImpl implements TransactionService {
 
         return new TransactionCreateUpdateResponse("Transaction successfully deleted.", transactionEntity.getTransactionId());
     }
-
 
 }

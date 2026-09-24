@@ -2,6 +2,7 @@ package com.monetrax.monetrax.transactions.repository;
 
 import com.monetrax.monetrax.transactions.entity.TransactionCategoriesEmbeddable;
 import com.monetrax.monetrax.transactions.entity.TransactionCategoriesEntity;
+import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionLineItemsEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -29,4 +30,6 @@ public interface TransactionCategoriesRepository extends JpaRepository<Transacti
     @Query("select count(t) from TransactionCategoriesEntity t where t.id.transactionId in ?1 and t.id.categoryId = ?2")
     public int countCategoriesInUserTransactions(List<UUID> transactionId, UUID categoryId);
 
+    @Query("select t from TransactionCategoriesEntity t join fetch t.category where t.id.transactionId in ?1")
+    List<TransactionCategoriesEntity> fetchTransactionCategoriesForScheduler(List<UUID> transactionIds);
 }
