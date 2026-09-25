@@ -11,6 +11,7 @@ import com.monetrax.monetrax.categories.repository.CategoryRepository;
 import com.monetrax.monetrax.categories.service.CategoryService;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.repository.TransactionCategoriesRepository;
+import com.monetrax.monetrax.transactions.repository.TransactionRecurrenceRuleRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionRepository;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
@@ -31,13 +32,15 @@ public class CategoryServiceImpl implements CategoryService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionCategoriesRepository transactionCategoriesRepository;
+    private final TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, UserRepository userRepository, TransactionRepository transactionRepository, TransactionCategoriesRepository transactionCategoriesRepository){
+    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryMapper categoryMapper, UserRepository userRepository, TransactionRepository transactionRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository){
         this.categoryRepository = categoryRepository;
         this.categoryMapper = categoryMapper;
         this.userRepository = userRepository;
         this.transactionRepository = transactionRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
+        this.transactionRecurrenceRuleRepository = transactionRecurrenceRuleRepository;
     }
 
     public CategoryInformation getCategory(UUID categoryId, UUID userId){
@@ -66,6 +69,12 @@ public class CategoryServiceImpl implements CategoryService {
         int countOfOccurrencesOfCategoryInsideTransactions = transactionCategoriesRepository.countCategoriesInUserTransactions(transactionUUIDs, categoryId);
         if(countOfOccurrencesOfCategoryInsideTransactions!=0){
             throw new ForbiddenCategoryDeletionException("Category is used in %d transaction/s. Please remove them before deleting the category."
+                    .formatted(countOfOccurrencesOfCategoryInsideTransactions));
+        }
+
+        int countOfTransactionRecurrenceRules = transactionRecurrenceRuleRepository.countTransactionRecurrenceRulesThatUseCategoryBasedOnTransactions(transactionUUIDs);
+        if(countOfTransactionRecurrenceRules!=0){
+            throw new ForbiddenCategoryDeletionException("Category is used in %d transaction rule recurrence/s. Please remove them before deleting the category."
                     .formatted(countOfOccurrencesOfCategoryInsideTransactions));
         }
 

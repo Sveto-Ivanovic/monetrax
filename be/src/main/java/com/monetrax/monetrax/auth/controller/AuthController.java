@@ -24,8 +24,8 @@ public class AuthController {
         }
 
 
-        @GetMapping("/test")
+        @GetMapping("/health-check")
         public ResponseEntity<String> authenticateAndGetToken() {
-            return ResponseEntity.ok("Test");
+            return ResponseEntity.ok("Health test: ok.");
         }
     }
