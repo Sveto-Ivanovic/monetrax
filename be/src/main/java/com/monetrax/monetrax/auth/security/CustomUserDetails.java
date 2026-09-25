@@ -25,6 +25,7 @@ public class CustomUserDetails implements UserDetails {
         this.userId= userEntity.getUserId();
         this.isVerified = userEntity.isHasVerifiedEmail();
         this.authorities = new ArrayList<>();
+        this.userEntity = userEntity;
         this.authorities.add(new SimpleGrantedAuthority(userEntity.getRole()));
     }
 
@@ -65,5 +66,9 @@ public class CustomUserDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return isVerified;
+    }
+
+    public UserEntity getUserFromDetails(){
+        return this.userEntity;
     }
 }

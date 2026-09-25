@@ -31,3 +31,5 @@ logging:
 jwt:
   secret: xIzd1FTr25wQNeoK6sdcvajx5HUmtzFSdI8Lft7nlDlg28MfdcGZJp7752bOIYRj
   expiration: 3600000
+  refreshExpirationMs: 86400000
+  refreshTokenLength: 64
