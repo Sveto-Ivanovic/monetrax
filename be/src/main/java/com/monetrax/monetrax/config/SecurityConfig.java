@@ -43,7 +43,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws  Exception{
-        String[] excludeRoutes = {"/", "/auth/login", "/auth/health-check", "/error", "/user/create", "/h2-console/**"};
+        String[] excludeRoutes = {"/", "/auth/login", "/auth/token/refresh", "/auth/token/logout",  "/auth/health-check", "/error", "/user/create", "/h2-console/**"};
         http.csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(authorize -> authorize.requestMatchers(excludeRoutes)

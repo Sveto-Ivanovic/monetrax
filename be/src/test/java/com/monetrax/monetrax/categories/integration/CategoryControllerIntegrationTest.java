@@ -2,6 +2,7 @@ package com.monetrax.monetrax.categories.integration;
 
 import com.monetrax.monetrax.auth.dto.AuthRequest;
 import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.repository.RefreshTokenRepository;
 import com.monetrax.monetrax.categories.dto.*;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
@@ -44,6 +45,9 @@ public class CategoryControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private String authToken;
     private UUID userId;
@@ -90,6 +94,7 @@ public class CategoryControllerIntegrationTest {
 
     @AfterAll
     void deleteTheUser(){
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 

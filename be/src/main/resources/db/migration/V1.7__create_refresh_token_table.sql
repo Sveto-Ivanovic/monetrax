@@ -1,6 +1,6 @@
 CREATE TABLE refresh_tokens (
                                 refresh_token_id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                                user_id              UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                                user_id              UUID NOT NULL REFERENCES user_table(user_id) ON DELETE CASCADE,
                                 token_hash           VARCHAR(255) NOT NULL UNIQUE,
                                 issued_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
                                 expires_at           TIMESTAMPTZ NOT NULL,

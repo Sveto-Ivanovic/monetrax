@@ -42,12 +42,13 @@ public class AuthController {
             String ipAddress = httpRequest.getRemoteAddr();
             String refreshToken = refreshTokenService.createRefreshToken(loginResponse.getUser(), ipAddress, userAgent, null);
 
+            System.out.println(refreshTokenDurationMs);
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
                     .maxAge(refreshTokenDurationMs/1000)
                     .sameSite(SameSiteCookies.STRICT.toString())
                     .secure(true)
-                    .path("/auth")
+                    .path("/auth/token")
                     .build();
 
 
@@ -56,7 +57,7 @@ public class AuthController {
             return ResponseEntity.ok(loginResponse.getAuthResponse());
         }
 
-        @PostMapping("/refresh")
+        @PostMapping("/token/refresh")
         public ResponseEntity<AuthResponse> refreshTokens(@CookieValue(value = "refreshToken", required = true) String refreshToken, HttpServletRequest httpRequest, HttpServletResponse response){
 
             String userAgent = httpRequest.getHeader("User-Agent");
@@ -68,8 +69,8 @@ public class AuthController {
                     .httpOnly(true)
                     .maxAge(refreshTokenDurationMs/1000)
                     .sameSite(SameSiteCookies.STRICT.toString())
-                    .secure(true)
-                    .path("/auth")
+                     .secure(true)
+                    .path("/auth/token")
                     .build();
 
 
@@ -81,14 +82,14 @@ public class AuthController {
                     .build());
         }
 
-    @PostMapping("/logout")
+    @PostMapping("/token/logout")
     public ResponseEntity<String> logOut(@CookieValue(value = "refreshToken", required = true) String refreshToken, HttpServletRequest httpRequest, HttpServletResponse response){
 
         refreshTokenService.negateRefreshToken(refreshToken);
 
         Cookie cookie = new Cookie("refreshToken", "");
         cookie.setMaxAge(0);
-        cookie.setPath("/auth");
+        cookie.setPath("/auth/token");
         response.addCookie(cookie);
 
         return ResponseEntity.ok("Successfully logged out.");

@@ -2,6 +2,7 @@ package com.monetrax.monetrax.user.integration;
 
 import com.monetrax.monetrax.auth.dto.AuthRequest;
 import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.repository.RefreshTokenRepository;
 import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
 import com.monetrax.monetrax.user.dto.*;
@@ -33,10 +34,14 @@ public class UserControllerIntegrationTest {
     private TestRestTemplate restTemplate = new TestRestTemplate();
 
     @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @AfterEach
     void cleanChanges(){
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 

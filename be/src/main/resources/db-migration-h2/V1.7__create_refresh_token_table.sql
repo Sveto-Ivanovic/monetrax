@@ -8,7 +8,7 @@ CREATE TABLE refresh_tokens (
                                 replaced_by_token_id UUID,
                                 user_agent           VARCHAR(255),
                                 ip_address           VARCHAR(45),
-                                CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+                                CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES user_table(user_id),
                                 CONSTRAINT fk_refresh_tokens_replaced_by FOREIGN KEY (replaced_by_token_id) REFERENCES refresh_tokens(refresh_token_id)
 );
 

@@ -10,6 +10,7 @@ import com.monetrax.monetrax.alerts.repository.AlertConditionRepository;
 import com.monetrax.monetrax.alerts.repository.AlertRepository;
 import com.monetrax.monetrax.auth.dto.AuthRequest;
 import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.repository.RefreshTokenRepository;
 import com.monetrax.monetrax.categories.dto.CategoryCreate;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.dto.FetchAllCategoriesResponse;
@@ -81,6 +82,9 @@ public class AlertControllerIntegrationTest {
 
     @Autowired
     private TransactionLineItemsRepository transactionLineItemsRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     private String authToken;
     private UUID userId;
@@ -256,6 +260,7 @@ public class AlertControllerIntegrationTest {
 
     @AfterAll
     void deleteTheUser() {
+        refreshTokenRepository.deleteAll();
         transactionAdditionalInfoRepository.deleteAll();
         transactionLineItemsRepository.deleteAll();
         transactionCategoriesRepository.deleteAll();
