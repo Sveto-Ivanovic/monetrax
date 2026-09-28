@@ -23,4 +23,8 @@ public interface TransactionRecurrenceRuleRepository extends JpaRepository<Trans
 
     @Query("Select t from TransactionRecurrenceRuleEntity t where t.sourceTransaction.transactionId = ?1 and t.recurrenceRuleId = ?2")
     Optional<TransactionRecurrenceRuleEntity> fetchTransactionRule(UUID transactionId, UUID transactionRuleId);
+
+
+    @Query("Select count(t) from TransactionRecurrenceRuleEntity t where t.sourceTransaction.transactionId in ?1")
+    int countTransactionRecurrenceRulesThatUseCategoryBasedOnTransactions(List<UUID> transactionId);
 }

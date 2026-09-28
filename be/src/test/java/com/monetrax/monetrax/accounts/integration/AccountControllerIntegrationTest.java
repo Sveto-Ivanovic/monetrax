@@ -4,11 +4,13 @@ import com.monetrax.monetrax.accounts.dto.*;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.auth.dto.AuthRequest;
 import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.repository.RefreshTokenRepository;
 import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.common.exception.GlobalExceptionHandler;
 import com.monetrax.monetrax.user.dto.UserCreation;
 import com.monetrax.monetrax.user.dto.UserInformation;
 import com.monetrax.monetrax.user.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -26,6 +28,7 @@ import java.util.UUID;
 import static org.hibernate.validator.internal.util.Contracts.assertNotNull;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AccountControllerIntegrationTest {
@@ -41,9 +44,34 @@ public class AccountControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+
     private String authToken;
     private UUID userId;
     private String secondUserAuthToken;
+
+    private ResponseEntity<AuthResponse> loginAs(String baseUrl, String email, String password) {
+        AuthRequest req = AuthRequest.builder().email(email).password(password).build();
+        return restTemplate.postForEntity(baseUrl + "/auth/login", req, AuthResponse.class);
+    }
+
+    private String extractRefreshToken(ResponseEntity<?> res) {
+        List<String> cookies = res.getHeaders().get(HttpHeaders.SET_COOKIE);
+        assertNotNull(cookies);
+        String prefix = "refreshToken=";
+        return cookies.stream()
+                .filter(c -> c.startsWith(prefix))
+                .findFirst()
+                .map(c -> c.substring(prefix.length(), c.indexOf(';') == -1 ? c.length() : c.indexOf(';')))
+                .orElseThrow(() -> new AssertionError("No refreshToken cookie in response"));
+    }
+
+    private HttpEntity<Void> withRefreshCookie(String refreshToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.COOKIE, "refreshToken=" + refreshToken);
+        return new HttpEntity<>(headers);
+    }
 
     @BeforeAll
     void authenticate() {
@@ -106,6 +134,7 @@ public class AccountControllerIntegrationTest {
 
     @AfterAll
     void deleteTheUser(){
+        refreshTokenRepository.deleteAll();
         userRepository.deleteAllUsersExceptSupperUser(UUID.fromString("00000000-0000-0000-0000-000000000001"));
     }
 
@@ -403,6 +432,101 @@ public class AccountControllerIntegrationTest {
     }
 
 
+    // Auth flow starts from here
+
+    @Test
+    public void loginWithValidCredentialsReturnsJwtAndRefreshCookieIT() {
+        String baseUrl = "http://localhost:" + port;
+
+        ResponseEntity<AuthResponse> res = loginAs(baseUrl, "john.doe742@example.com", "TestPass123!");
+
+        assertEquals(HttpStatus.OK, res.getStatusCode());
+        assertNotNull(res.getBody());
+        assertNotNull(res.getBody().getAuthToken());
+        assertEquals(this.userId.toString(), res.getBody().getUserId());
+
+        String setCookie = res.getHeaders().get(HttpHeaders.SET_COOKIE).stream()
+                .filter(c->c.startsWith("refreshToken=")).findFirst().orElse(null);
+        assertNotNull(setCookie);
+        assertTrue(setCookie.startsWith("refreshToken="));
+        assertTrue(setCookie.contains("HttpOnly"));
+        assertTrue(setCookie.contains("Secure"));
+        log.info(setCookie);
+        assertTrue(setCookie.toLowerCase().contains("samesite=strict"));
+        assertTrue(setCookie.contains("Path=/auth/token"));
+        assertFalse(extractRefreshToken(res).isBlank());
+    }
+
+    @Test
+    public void loginWithWrongPasswordFailsIT() {
+        String baseUrl = "http://localhost:" + port;
+
+        ResponseEntity<String> res = restTemplate.postForEntity(
+                baseUrl + "/auth/login",
+                AuthRequest.builder().email("john.doe742@example.com").password("WrongPass999!").build(),
+                String.class);
+
+        assertTrue(res.getStatusCode().is4xxClientError());
+        assertNull(res.getHeaders().get(HttpHeaders.SET_COOKIE));
+    }
+
+    @Test
+    public void refreshTokenReturnsNewJwtAndRotatesCookieIT() {
+        String baseUrl = "http://localhost:" + port;
+
+        ResponseEntity<AuthResponse> loginRes = loginAs(baseUrl, "john.doe742@example.com", "TestPass123!");
+        String oldRefresh = extractRefreshToken(loginRes);
+
+        ResponseEntity<AuthResponse> refreshRes = restTemplate.exchange(
+                baseUrl + "/auth/token/refresh", HttpMethod.POST,
+                withRefreshCookie(oldRefresh), AuthResponse.class);
+
+        assertEquals(HttpStatus.OK, refreshRes.getStatusCode());
+        assertNotNull(refreshRes.getBody());
+        assertNotNull(refreshRes.getBody().getAuthToken());
+        assertEquals(this.userId.toString(), refreshRes.getBody().getUserId());
+
+        String newRefresh = extractRefreshToken(refreshRes);
+        assertNotEquals(oldRefresh, newRefresh);
+    }
+
+    @Test
+    public void refreshWithInvalidTokenFailsIT() {
+        String baseUrl = "http://localhost:" + port;
+
+        ResponseEntity<String> res = restTemplate.exchange(
+                baseUrl + "/auth/token/refresh", HttpMethod.POST,
+                withRefreshCookie("thisTokenDoesNotExist123"), String.class);
+
+        log.info(res.getBody());
+        assertTrue(res.getStatusCode().is4xxClientError());
+    }
+
+    @Test
+    public void logoutRevokesRefreshTokenAndClearsCookieIT() {
+        String baseUrl = "http://localhost:" + port;
+
+        String refresh = extractRefreshToken(loginAs(baseUrl, "john.doe742@example.com", "TestPass123!"));
+
+        ResponseEntity<String> logoutRes = restTemplate.exchange(
+                baseUrl + "/auth/token/logout", HttpMethod.POST,
+                withRefreshCookie(refresh), String.class);
+
+        assertEquals(HttpStatus.OK, logoutRes.getStatusCode());
+        assertEquals("Successfully logged out.", logoutRes.getBody());
+
+        String setCookie = logoutRes.getHeaders().get(HttpHeaders.SET_COOKIE).stream()
+                .filter(c->c.startsWith("refreshToken=")).findFirst().orElse(null);
+        assertNotNull(setCookie);
+        log.info(setCookie);
+        assertTrue(setCookie.contains("refreshToken=;"));
+
+        // the revoked token can no longer be used to refresh
+        ResponseEntity<String> refreshRes = restTemplate.exchange(
+                baseUrl + "/auth/token/refresh", HttpMethod.POST,
+                withRefreshCookie(refresh), String.class);
+        assertTrue(refreshRes.getStatusCode().is4xxClientError());
+    }
 
 
 }

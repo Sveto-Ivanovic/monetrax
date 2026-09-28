@@ -5,6 +5,7 @@ import com.monetrax.monetrax.accounts.dto.AccountInformation;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.auth.dto.AuthRequest;
 import com.monetrax.monetrax.auth.dto.AuthResponse;
+import com.monetrax.monetrax.auth.repository.RefreshTokenRepository;
 import com.monetrax.monetrax.categories.dto.CategoryCreate;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.dto.FetchAllCategoriesResponse;
@@ -70,6 +71,9 @@ public class TransactionControllerIntegrationTest {
 
     @Autowired
     private CategoryRepository categoryRepository;
+
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -175,6 +179,7 @@ public class TransactionControllerIntegrationTest {
 
     @AfterEach
     void cleanChanges() {
+        refreshTokenRepository.deleteAll();
         transactionAdditionalInfoRepository.deleteAll();
         transactionLineItemsRepository.deleteAll();
         transactionCategoriesRepository.deleteAll();

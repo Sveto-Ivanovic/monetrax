@@ -5,6 +5,7 @@ import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
 import com.monetrax.monetrax.alerts.exceptions.NoSuchAlertException;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
+import com.monetrax.monetrax.auth.exceptions.RefreshTokenAuthenticationException;
 import com.monetrax.monetrax.categories.exceptions.CategoryAlreadyExistsException;
 import com.monetrax.monetrax.categories.exceptions.ForbiddenCategoryDeletionException;
 import com.monetrax.monetrax.categories.exceptions.MissingFieldsForCategoryUpdate;
@@ -280,6 +281,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleNoSuchAlertException(NoSuchAlertException ex){
         return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidRequestParams"));
+    }
+
+    @ExceptionHandler(RefreshTokenAuthenticationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleRefreshTokenAuthenticationException(RefreshTokenAuthenticationException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidRefreshToken"));
     }
 
 }
