@@ -87,7 +87,7 @@ public class AiAPiServiceImpl implements AiAPiService {
            return Base64.getEncoder().encodeToString(combinedIvAndCipherText);
        }
        catch (Exception e){
-           throw new RuntimeException("Encryption failed", e)
+           throw new RuntimeException("Encryption failed", e);
        }
     }
 
