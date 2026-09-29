@@ -39,12 +39,13 @@ public class AuthController {
     public ResponseEntity<AuthResponse> authenticateAndGetToken(@Valid @RequestBody AuthRequest authInfo, HttpServletRequest httpRequest, HttpServletResponse response) {
         String ipAddress = httpRequest.getRemoteAddr();
         String userAgent = httpRequest.getHeader("User-Agent");
-        log.info("Login attempt from ip={}", ipAddress);
+        log.info("Endpoint called: POST /auth/login [ip={}]", ipAddress);
+        log.debug("POST /auth/login [ip={}, userAgent={}]", ipAddress, userAgent);
 
         try {
             AuthService.LoginResponse loginResponse = authService.login(authInfo);
             String refreshToken = refreshTokenService.createRefreshToken(loginResponse.getUser(), ipAddress, userAgent, null);
-            log.debug("Refresh token created for userId={}", loginResponse.getUser().getUserId());
+            log.debug("POST /auth/login refresh token created [userId={}]", loginResponse.getUser().getUserId());
 
             ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
                     .httpOnly(true)
@@ -56,10 +57,10 @@ public class AuthController {
 
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-            log.info("Login successful for userId={}, ip={}", loginResponse.getUser().getUserId(), ipAddress);
+            log.info("POST /auth/login succeeded [userId={}, ip={}]", loginResponse.getUser().getUserId(), ipAddress);
             return ResponseEntity.ok(loginResponse.getAuthResponse());
         } catch (Exception e) {
-            log.warn("Login failed from ip={}: {}", ipAddress, e.getMessage());
+            log.warn("POST /auth/login failed [ip={}]: {}", ipAddress, e.getMessage());
             throw e;
         }
     }
@@ -68,7 +69,8 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refreshTokens(@CookieValue(value = "refreshToken", required = true) String refreshToken, HttpServletRequest httpRequest, HttpServletResponse response) {
         String ipAddress = httpRequest.getRemoteAddr();
         String userAgent = httpRequest.getHeader("User-Agent");
-        log.info("Token refresh requested from ip={}", ipAddress);
+        log.info("Endpoint called: POST /auth/token/refresh [ip={}]", ipAddress);
+        log.debug("POST /auth/token/refresh [ip={}, userAgent={}]", ipAddress, userAgent);
 
         try {
             var res = refreshTokenService.refreshToken(refreshToken, ipAddress, userAgent);
@@ -84,35 +86,41 @@ public class AuthController {
 
             response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-            log.info("Token refresh successful for userId={}, ip={}", res.getUser().getUserId(), ipAddress);
+            log.info("POST /auth/token/refresh succeeded [userId={}, ip={}]", res.getUser().getUserId(), ipAddress);
             return ResponseEntity.ok(AuthResponse.builder()
                     .authToken(jwtToken)
                     .userId(res.getUser().getUserId().toString())
                     .build());
         } catch (Exception e) {
-            log.warn("Token refresh failed from ip={}: {}", ipAddress, e.getMessage());
+            log.warn("POST /auth/token/refresh failed [ip={}]: {}", ipAddress, e.getMessage());
             throw e;
         }
     }
 
     @PostMapping("/token/logout")
     public ResponseEntity<String> logOut(@CookieValue(value = "refreshToken", required = true) String refreshToken, HttpServletRequest httpRequest, HttpServletResponse response) {
-        log.info("Logout requested from ip={}", httpRequest.getRemoteAddr());
+        String ipAddress = httpRequest.getRemoteAddr();
+        log.info("Endpoint called: POST /auth/token/logout [ip={}]", ipAddress);
 
-        refreshTokenService.negateRefreshToken(refreshToken);
+        try {
+            refreshTokenService.negateRefreshToken(refreshToken);
 
-        Cookie cookie = new Cookie("refreshToken", "");
-        cookie.setMaxAge(0);
-        cookie.setPath("/auth/token");
-        response.addCookie(cookie);
+            Cookie cookie = new Cookie("refreshToken", "");
+            cookie.setMaxAge(0);
+            cookie.setPath("/auth/token");
+            response.addCookie(cookie);
 
-        log.info("Logout successful, refresh token invalidated");
-        return ResponseEntity.ok("Successfully logged out.");
+            log.info("POST /auth/token/logout succeeded [ip={}]", ipAddress);
+            return ResponseEntity.ok("Successfully logged out.");
+        } catch (Exception e) {
+            log.warn("POST /auth/token/logout failed [ip={}]: {}", ipAddress, e.getMessage());
+            throw e;
+        }
     }
 
     @GetMapping("/health-check")
-    public ResponseEntity<String> authenticateAndGetToken() {
-        log.debug("Health check called");
+    public ResponseEntity<String> healthCheck() {
+        log.debug("Endpoint called: GET /auth/health-check");
         return ResponseEntity.ok("Health test: ok.");
     }
 }
