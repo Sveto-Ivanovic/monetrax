@@ -1,4 +1,4 @@
-create table user_table (
+CREATE TABLE IF NOT EXISTS user_table (
                             user_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                             user_email varchar(254) not null unique,
                             created_at timestamptz not null default now(),

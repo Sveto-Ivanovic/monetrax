@@ -1,4 +1,4 @@
-CREATE TABLE user_table (
+CREATE TABLE IF NOT EXISTS user_table (
                             user_id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                             user_email VARCHAR(254) NOT NULL UNIQUE,
                             created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

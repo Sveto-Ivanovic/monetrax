@@ -14,20 +14,20 @@ CREATE TABLE transactions (
                               created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE transaction_categories (
+CREATE TABLE IF NOT EXISTS transaction_categories (
                                         transaction_id UUID NOT NULL REFERENCES transactions(transaction_id) ON DELETE CASCADE,
                                         category_id UUID NOT NULL REFERENCES categories_table(category_id),
                                         PRIMARY KEY (transaction_id, category_id)
 );
 
-CREATE TABLE transaction_line_items (
+CREATE TABLE IF NOT EXISTS transaction_line_items (
                                         line_item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                                         transaction_id UUID NOT NULL REFERENCES transactions(transaction_id) ON DELETE CASCADE,
                                         product_name VARCHAR(150) NOT NULL,
                                         amount NUMERIC(14,2) NOT NULL
 );
 
-CREATE TABLE transaction_additional_info (
+CREATE TABLE IF NOT EXISTS transaction_additional_info (
                                         transaction_info_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                                          transaction_id UUID NOT NULL REFERENCES transactions(transaction_id) ON DELETE CASCADE,
                                          kind adjustment_kind NOT NULL,
