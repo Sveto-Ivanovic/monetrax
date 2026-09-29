@@ -13,12 +13,14 @@ import com.monetrax.monetrax.transactions.mapper.GlobalTransactionMapper;
 import com.monetrax.monetrax.transactions.repository.TransactionRecurrenceRuleRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionRepository;
 import com.monetrax.monetrax.transactions.service.TransactionRecurrenceRuleService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TransactionRecurrenceRuleServiceImpl implements TransactionRecurrenceRuleService {
 
@@ -38,29 +40,43 @@ public class TransactionRecurrenceRuleServiceImpl implements TransactionRecurren
 
     @Override
     public TransactionRecurrenceResponse getAllTransactionRulesForAccount(UUID accountId, UUID userId) {
-        AccountEntity account = accountRepository.findAccountNonLock(userId, accountId).orElseThrow(()->{
+        log.debug("Fetching recurrence rules for account [accountId={}, userId={}]", accountId, userId);
+
+        AccountEntity account = accountRepository.findAccountNonLock(userId, accountId).orElseThrow(() -> {
+            log.warn("Recurrence rules fetch failed, account not found [accountId={}, userId={}]", accountId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
         List<TransactionEntity> transactionEntityList = transactionRepository.fetchAllAccountTransactions(account.getAccountId());
+        log.debug("Fetched account transactions for recurrence rules [accountId={}, transactionCount={}]", accountId, transactionEntityList.size());
 
         List<TransactionRecurrenceRuleEntity> transactionRecurrenceRuleEntityList = transactionRecurrenceRuleRepository
                 .fetchRulesWithTransactionIds(transactionEntityList.stream().map(TransactionEntity::getTransactionId).toList());
 
         List<TransactionRecurrenceInformation> list = new ArrayList<>();
         for(var rule: transactionRecurrenceRuleEntityList){
-           list.add(globalTransactionMapper
-                   .fromTransactionEntityAndTransactionRecurrenceRuleEntityToTransactionRecurrenceInformation(rule.getSourceTransaction(), rule));
+            list.add(globalTransactionMapper
+                    .fromTransactionEntityAndTransactionRecurrenceRuleEntityToTransactionRecurrenceInformation(rule.getSourceTransaction(), rule));
         }
 
+        log.debug("Fetched recurrence rules [accountId={}, userId={}, ruleCount={}]", accountId, userId, list.size());
         return new TransactionRecurrenceResponse(list);
     }
 
     @Override
     public TransactionCreateUpdateResponse deleteTransactionRule(UUID transactionRuleId, UUID transactionId, UUID userId) {
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
-        TransactionRecurrenceRuleEntity transactionRecurrenceRuleEntity = transactionRecurrenceRuleRepository.fetchTransactionRule(transactionEntity.getTransactionId(), transactionRuleId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction rule found !"));
+        log.info("Deleting transaction recurrence rule [ruleId={}, transactionId={}, userId={}]", transactionRuleId, transactionId, userId);
+
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(() -> {
+            log.warn("Recurrence rule deletion failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
+        TransactionRecurrenceRuleEntity transactionRecurrenceRuleEntity = transactionRecurrenceRuleRepository.fetchTransactionRule(transactionEntity.getTransactionId(), transactionRuleId).orElseThrow(() -> {
+            log.warn("Recurrence rule deletion failed, rule not found [ruleId={}, transactionId={}, userId={}]", transactionRuleId, transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction rule found !");
+        });
 
         transactionRecurrenceRuleRepository.delete(transactionRecurrenceRuleEntity);
+        log.info("Transaction recurrence rule deleted [ruleId={}, transactionId={}, userId={}]", transactionRuleId, transactionId, userId);
 
         return new TransactionCreateUpdateResponse("Successfully deleted the rule", null);
     }

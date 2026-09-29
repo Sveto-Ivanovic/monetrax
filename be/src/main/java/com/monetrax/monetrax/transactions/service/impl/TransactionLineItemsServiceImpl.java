@@ -2,18 +2,18 @@ package com.monetrax.monetrax.transactions.service.impl;
 
 import com.monetrax.monetrax.transactions.dto.TransactionCreateUpdateResponse;
 import com.monetrax.monetrax.transactions.dto.TransactionLineItemsCreate;
-import com.monetrax.monetrax.transactions.entity.TransactionAdditionalInfoEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionLineItemsEntity;
 import com.monetrax.monetrax.transactions.exceptions.MissingTransactionLikeEntityException;
-import com.monetrax.monetrax.transactions.repository.TransactionAdditionalInfoRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionLineItemsRepository;
 import com.monetrax.monetrax.transactions.repository.TransactionRepository;
 import com.monetrax.monetrax.transactions.service.TransactionLineItemsService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TransactionLineItemsServiceImpl implements TransactionLineItemsService {
 
@@ -28,7 +28,12 @@ public class TransactionLineItemsServiceImpl implements TransactionLineItemsServ
 
     @Override
     public TransactionCreateUpdateResponse createTransactionLineItem(TransactionLineItemsCreate transactionLineItemsCreate, UUID userId, UUID transactionId) {
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+        log.info("Creating transaction line item [transactionId={}, userId={}]", transactionId, userId);
+
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(() -> {
+            log.warn("Line item creation failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
         var item = transactionLineItemsRepository.save(
                 TransactionLineItemsEntity.builder()
                         .transaction(transactionEntity)
@@ -36,15 +41,24 @@ public class TransactionLineItemsServiceImpl implements TransactionLineItemsServ
                         .productName(transactionLineItemsCreate.getProductName())
                         .build()
         );
+        log.info("Transaction line item created [lineItemId={}, transactionId={}, userId={}]", item.getLineItemId(), transactionId, userId);
         return new TransactionCreateUpdateResponse("Successfully created transaction line product item.", item.getLineItemId());
     }
 
     @Override
     public TransactionCreateUpdateResponse deleteTransactionLineItem(UUID userId, UUID transactionLineId, UUID transactionId) {
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
-        TransactionLineItemsEntity transactionAdditionalInfoEntity = transactionLineItemsRepository.fetchByIds(transactionId, transactionLineId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such  transaction line product item found !"));
-        transactionLineItemsRepository.delete(transactionAdditionalInfoEntity);
-        return new TransactionCreateUpdateResponse("Successfully deleted transaction line product info item.", transactionAdditionalInfoEntity.getLineItemId());
+        log.info("Deleting transaction line item [lineItemId={}, transactionId={}, userId={}]", transactionLineId, transactionId, userId);
 
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(() -> {
+            log.warn("Line item deletion failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
+        TransactionLineItemsEntity transactionLineItemEntity = transactionLineItemsRepository.fetchByIds(transactionId, transactionLineId).orElseThrow(() -> {
+            log.warn("Line item deletion failed, item not found [lineItemId={}, transactionId={}, userId={}]", transactionLineId, transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such  transaction line product item found !");
+        });
+        transactionLineItemsRepository.delete(transactionLineItemEntity);
+        log.info("Transaction line item deleted [lineItemId={}, transactionId={}, userId={}]", transactionLineId, transactionId, userId);
+        return new TransactionCreateUpdateResponse("Successfully deleted transaction line product info item.", transactionLineItemEntity.getLineItemId());
     }
 }

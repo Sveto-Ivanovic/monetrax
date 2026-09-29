@@ -80,8 +80,10 @@ public class TransactionServiceImpl implements TransactionService {
 
     private CategoryRelatedData checkCreateUpdateCategoryValidity( List<RequestedCategoryInformation> selectedCategories, UUID userId){
         //check if categories don't exist or if all categories don't share the same category type
-        if(selectedCategories.isEmpty())
+        if(selectedCategories.isEmpty()) {
+            log.warn("Category validation failed, no categories selected [userId={}]", userId);
             throw new InvalidTransactionCreationException("You need to select one or more categories!");
+        }
 
         // get all categories available to user
         List<CategoryEntity> listOfAllAvailableCategories = categoryRepository.fetchUsersAndDefaultCategories(true, userId);
@@ -97,12 +99,17 @@ public class TransactionServiceImpl implements TransactionService {
         final CategoryKind categoryKind = categoryEntityMap.get(selectedCategories.get(0).getCategoryId()).getCategoryType();
         requestedCategoryInformationSet.forEach((e)->{
             CategoryEntity categoryItem = categoryEntityMap.get(e.getCategoryId());
-            if(categoryItem == null)
+            if(categoryItem == null) {
+                log.warn("Category validation failed, invalid category selected [userId={}, categoryId={}]", userId, e.getCategoryId());
                 throw new InvalidTransactionCreationException("One or more selected categories are invalid.");
-            if(categoryKind!=categoryItem.getCategoryType())
+            }
+            if(categoryKind!=categoryItem.getCategoryType()) {
+                log.warn("Category validation failed, mixed category types [userId={}, expectedKind={}, categoryId={}, foundKind={}]", userId, categoryKind, e.getCategoryId(), categoryItem.getCategoryType());
                 throw new InvalidTransactionCreationException("All selected categories must be of the same type.");
+            }
         });
 
+        log.debug("Category validation passed [userId={}, count={}, categoryKind={}]", userId, requestedCategoryInformationSet.size(), categoryKind);
         return CategoryRelatedData.builder()
                 .categoryEntityMap(categoryEntityMap)
                 .categoryKind(categoryKind)
@@ -114,9 +121,13 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public TransactionInformation getTransactionInformation(UUID transactionId, UUID userId) {
+        log.debug("Fetching transaction information [transactionId={}, userId={}]", transactionId, userId);
 
         // Fetching data here
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> {
+            log.warn("Transaction fetch failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
         List<TransactionAdditionalInfoEntity>  transactionAdditionalInfoEntities = transactionAdditionalInfoRepository.fetchAllTransactionsAdditionalInfo(transactionId);
         List<TransactionLineItemsEntity> transactionLineItemsEntities =  transactionLineItemsRepository.fetchAllTransactionsLineProducts(transactionId);
         List<TransactionCategoriesEntity> transactionCategoriesEntities = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
@@ -124,6 +135,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(tc -> tc.getId().getCategoryId())
                 .toList();
         List<CategoryEntity> categories = categoryRepository.findAllById(categoryIds);
+        log.debug("Fetched transaction data [transactionId={}, additionalInfoCount={}, lineItemCount={}, categoryCount={}]", transactionId, transactionAdditionalInfoEntities.size(), transactionLineItemsEntities.size(), categories.size());
 
         // Preprocessing data here
         List<TransactionAdditionalInfoInformation> additionalInfoInformations = transactionAdditionalInfoEntities.stream()
@@ -143,11 +155,15 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public ListOfAccountTransactions getAccountTransactions(UUID accountId, UUID userId) {
+        log.debug("Fetching account transactions [accountId={}, userId={}]", accountId, userId);
+
         AccountEntity account = accountRepository.findAccountNonLock(userId, accountId).orElseThrow(()->{
+            log.warn("Account transactions fetch failed, account not found [accountId={}, userId={}]", accountId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
 
         List<TransactionEntity> transactionEntities = transactionRepository.fetchAllAccountTransactions(accountId);
+        log.debug("Fetched account transactions [accountId={}, transactionCount={}]", accountId, transactionEntities.size());
         List<TransactionInformationPart> informationParts;
 
         // if we have transactions in the account
@@ -174,6 +190,7 @@ public class TransactionServiceImpl implements TransactionService {
             List<CategoryEntity> categories = categoryRepository.findAllById(categoryIds);
             Map<UUID, CategoryEntity> uuidSetCategoryEntityMap = categories.stream()
                     .collect(Collectors.toMap(CategoryEntity::getCategoryId, x->x));
+            log.debug("Fetched categories for account transactions [accountId={}, uniqueCategoryCount={}]", accountId, categories.size());
 
 
             // Finally map of transaction id - list of category Entities
@@ -204,6 +221,7 @@ public class TransactionServiceImpl implements TransactionService {
         //*************************************************************************************************************************
 
         AccountInformation accountInformation = accountMapper.fromAccountEntityToAccountInformation(account);
+        log.debug("Built account transactions response [accountId={}, userId={}, count={}]", accountId, userId, informationParts.size());
         return ListOfAccountTransactions.builder()
                 .account(accountInformation)
                 .transactions(informationParts)
@@ -235,7 +253,6 @@ public class TransactionServiceImpl implements TransactionService {
         Set<RequestedCategoryInformation> requestedCategoryInformationSet = categoryRelatedData.getRequestedCategoryInformationSet();
         CategoryKind categoryKind = categoryRelatedData.getCategoryKind();
         log.debug("Validated categories: count={}, categoryKind={}", requestedCategoryInformationSet.size(), categoryKind);
-        log.info("CategoryKind: {}", categoryKind);
         //************************************************************************************************************************
         // conversion logic should be implemented bellow
         //************************************************************************************************************************
@@ -305,7 +322,7 @@ public class TransactionServiceImpl implements TransactionService {
         account.setCurrentBalance(updatedCurrentBalance);
         account.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
         accountRepository.save(account);
-        log.info("Updated balance for accountId={}: {} -> {}", accountId, previousBalance, updatedCurrentBalance);
+        log.info("Updated account balance for accountId={}, categoryKind={}", accountId, categoryKind);
 
         if (transactionCreate.getTransactionRecurrenceRule() != null) {
 
@@ -339,6 +356,7 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionCreateUpdateResponse updateTransaction(TransactionUpdate transactionUpdate, UUID userId, UUID transactionId) {
+        log.info("Updating transaction [transactionId={}, userId={}]", transactionId, userId);
 
         if (transactionUpdate.getName() == null
                 && transactionUpdate.getDescription() == null
@@ -347,15 +365,23 @@ public class TransactionServiceImpl implements TransactionService {
                 && (transactionUpdate.getCategories() == null
                 || transactionUpdate.getCategories().isEmpty())) {
 
+            log.warn("Transaction update rejected, no fields provided [transactionId={}, userId={}]", transactionId, userId);
             throw new MissingTransactionUpdatedFieldsException("At least one field needs to be provided.");
         }
 
         //fetch transaction
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> {
+            log.warn("Transaction update failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
 
         //fetch user and account
-        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
+        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
+            log.warn("Transaction update failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: "+ userId);
+        });
         AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
+            log.warn("Transaction update failed, account not found [transactionId={}, userId={}]", transactionId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
 
@@ -378,6 +404,7 @@ public class TransactionServiceImpl implements TransactionService {
             int countOfCategories = transactionCategoriesRepository.countTransactionCategories(transactionId);
             int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
             if (num_of_deleted != countOfCategories) {
+                log.error("Category deletion count mismatch during update [transactionId={}, expected={}, deleted={}]", transactionId, countOfCategories, num_of_deleted);
                 throw new IllegalStateDeletionException("Category deletion count mismatch for transaction " + transactionId);
             }
 
@@ -389,6 +416,7 @@ public class TransactionServiceImpl implements TransactionService {
             }
             transactionCategoriesRepository.saveAll(transactionCategoriesEntities);
             Optional.ofNullable(categoryKind).ifPresent(transactionEntity::setCategoryType);
+            log.debug("Updated transaction categories [transactionId={}, count={}, previousKind={}, newKind={}]", transactionId, transactionCategoriesEntities.size(), previousCategory, categoryKind);
         }
 
         // here we don't need conversion logic either we use the old or the user provided
@@ -409,6 +437,7 @@ public class TransactionServiceImpl implements TransactionService {
 
 
         TransactionEntity transactionEntityUpdated = transactionRepository.save(transactionEntity);
+        log.debug("Saved updated transaction [transactionId={}]", transactionId);
 
 
         if(amountNative!=null || transactionEntityUpdated.getCategoryType() != previousCategory){
@@ -435,24 +464,35 @@ public class TransactionServiceImpl implements TransactionService {
 
             account.setCurrentBalance(updatedCurrentBalance);
             accountRepository.save(account);
+            log.info("Recalculated account balance after transaction update [accountId={}, transactionId={}, previousKind={}, newKind={}]", account.getAccountId(), transactionId, previousCategory, transactionEntityUpdated.getCategoryType());
         }
 
         //*************************************************************************************************************************
         // code for handling alerts
         //*************************************************************************************************************************
 
+        log.info("Transaction updated successfully [transactionId={}, userId={}]", transactionId, userId);
         return new TransactionCreateUpdateResponse("Transaction successfully updated.", transactionEntity.getTransactionId());
     }
 
     @Override
     @Transactional
     public TransactionCreateUpdateResponse deleteTransaction(UUID userId, UUID transactionId) {
+        log.info("Deleting transaction [transactionId={}, userId={}]", transactionId, userId);
+
         //fetch transaction
-        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> new MissingTransactionLikeEntityException("No such transaction found !"));
+        TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> {
+            log.warn("Transaction deletion failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
+            return new MissingTransactionLikeEntityException("No such transaction found !");
+        });
 
         //fetch user and account
-        UserEntity user = userRepository.findById(userId).orElseThrow(()->new NoSuchUserExistsException("No user with id: "+ userId));
+        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
+            log.warn("Transaction deletion failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: "+ userId);
+        });
         AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
+            log.warn("Transaction deletion failed, account not found [transactionId={}, userId={}]", transactionId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
 
@@ -460,16 +500,20 @@ public class TransactionServiceImpl implements TransactionService {
         List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
         int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
         if (num_of_deleted != transactionCategoriesEntityList.size()) {
+            log.error("Category deletion count mismatch during transaction deletion [transactionId={}, expected={}, deleted={}]", transactionId, transactionCategoriesEntityList.size(), num_of_deleted);
             throw new IllegalStateDeletionException("Category deletion count mismatch for transaction " + transactionId);
         }
+        log.debug("Deleted {} transaction-category links [transactionId={}]", num_of_deleted, transactionId);
 
         // Delete all additional info categories
         List<TransactionAdditionalInfoEntity> transactionAdditionalInfoEntities = transactionAdditionalInfoRepository.fetchAllTransactionsAdditionalInfo(transactionId);
         if(!transactionAdditionalInfoEntities.isEmpty()){
             int num_of_deletion = transactionAdditionalInfoRepository.deleteAllTransactionAdditionalInfoByTransactionId(transactionId);
             if (num_of_deletion != transactionAdditionalInfoEntities.size()) {
+                log.error("Additional info deletion count mismatch during transaction deletion [transactionId={}, expected={}, deleted={}]", transactionId, transactionAdditionalInfoEntities.size(), num_of_deletion);
                 throw new IllegalStateDeletionException("Additional information deletion count mismatch for transaction " + transactionId);
             }
+            log.debug("Deleted {} additional info entries [transactionId={}]", num_of_deletion, transactionId);
         }
 
         // Delete all line items categories
@@ -477,13 +521,16 @@ public class TransactionServiceImpl implements TransactionService {
         if(!transactionLineItemsEntities.isEmpty()){
             int num_of_deletion = transactionLineItemsRepository.deleteAllTransactionLineItemsByTransactionId(transactionId);
             if (num_of_deletion != transactionLineItemsEntities.size()) {
+                log.error("Line items deletion count mismatch during transaction deletion [transactionId={}, expected={}, deleted={}]", transactionId, transactionLineItemsEntities.size(), num_of_deletion);
                 throw new IllegalStateDeletionException("Line items deletion count mismatch for transaction " + transactionId);
             }
+            log.debug("Deleted {} line items [transactionId={}]", num_of_deletion, transactionId);
         }
 
         // delete transaction recurrences
         Optional<TransactionRecurrenceRuleEntity> transactionRecurrenceRuleEntity = transactionRecurrenceRuleRepository.fetchRuleWithTransactionId(transactionId);
         transactionRecurrenceRuleEntity.ifPresent(transactionRecurrenceRuleRepository::delete);
+        log.debug("Recurrence rule deletion [transactionId={}, ruleFound={}]", transactionId, transactionRecurrenceRuleEntity.isPresent());
 
         BigDecimal revertCurrentBalance = switch (transactionEntity.getCategoryType()) {
             case INCOME, ADJUSTMENT_PLUS, TRANSFER_FROM -> account.getCurrentBalance().subtract(transactionEntity.getAmountNative());
@@ -492,9 +539,11 @@ public class TransactionServiceImpl implements TransactionService {
 
         account.setCurrentBalance(revertCurrentBalance);
         accountRepository.save(account);
+        log.info("Reverted account balance after transaction deletion [accountId={}, transactionId={}]", account.getAccountId(), transactionId);
 
         transactionRepository.delete(transactionEntity);
 
+        log.info("Transaction deleted successfully [transactionId={}, userId={}]", transactionId, userId);
         return new TransactionCreateUpdateResponse("Transaction successfully deleted.", transactionEntity.getTransactionId());
     }
 
