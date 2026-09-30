@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     updated_at        TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_api_keys PRIMARY KEY (key_id),
-    CONSTRAINT uq_api_keys_user_type_label UNIQUE (user_id, key_type, key_label),
+    CONSTRAINT uq_api_keys_user_type_label UNIQUE (user_id, key_type),
     CONSTRAINT fk_api_keys_user FOREIGN KEY (user_id) REFERENCES user_table (user_id),
     CONSTRAINT ck_api_keys_type CHECK (key_type IN (
                                        'GEMINI_API_KEY',

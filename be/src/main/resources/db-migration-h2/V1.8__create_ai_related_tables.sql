@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
     updated_at TIMESTAMP WITH TIME ZONE  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_api_keys PRIMARY KEY (key_id),
-    CONSTRAINT uq_api_keys_user_type_label UNIQUE (user_id, key_type, key_label),
+    CONSTRAINT uq_api_keys_user_type_label UNIQUE (user_id, key_type),
     CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES user_table(user_id),
     CONSTRAINT ck_api_keys_type CHECK (key_type IN (
                                        'GEMINI_API_KEY',
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS message_history (
     key_id  UUID,
     provider VARCHAR(50) NOT NULL,
     model VARCHAR(100),
-    raw_message CLOB NOT NULL,
+    raw_message VARCHAR(1000000) NOT NULL,
     structured_output JSON,
     status VARCHAR(20) NOT NULL,
     error_message VARCHAR(2000),

@@ -2,6 +2,8 @@ package com.monetrax.monetrax.common.exception;
 
 import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
+import com.monetrax.monetrax.ai.exceptions.EncryptDecryptException;
+import com.monetrax.monetrax.ai.exceptions.NoSuchApiKeyExistsException;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
 import com.monetrax.monetrax.alerts.exceptions.NoSuchAlertException;
 import com.monetrax.monetrax.auth.exceptions.JwtAuthenticationException;
@@ -289,4 +291,16 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "InvalidRefreshToken"));
     }
 
+
+    @ExceptionHandler(EncryptDecryptException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleEncryptDecryptException(EncryptDecryptException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "ErrorDuringEncryptionOrDecryptionOfApiKeys"));
+    }
+
+    @ExceptionHandler(NoSuchApiKeyExistsException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleNoSuchApiKeyExistsException(NoSuchApiKeyExistsException ex){
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "ApiKeyNotFound"));
+    }
 }
