@@ -634,7 +634,7 @@ public class TransactionServiceImpl implements TransactionService {
             }
 
             // if error is present
-            if (transactionExtraction.getError() != null) {
+            if (transactionExtraction.getError() != null && !transactionExtraction.getError().contains("null")&& !transactionExtraction.getError().isBlank()) {
                 log.info("AI extraction returned an error for userId={}: {}", userId, transactionExtraction.getError());
 
                 MessageHistoryEntity messageHistoryEntity = MessageHistoryEntity.builder()
