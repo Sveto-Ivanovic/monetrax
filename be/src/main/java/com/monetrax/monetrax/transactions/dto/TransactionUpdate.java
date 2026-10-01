@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.transactions.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,5 +31,5 @@ public class TransactionUpdate {
     @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
     private BigDecimal conversionFactor;
 
-    private List<RequestedCategoryInformation> categories;
+    private List<@Valid RequestedCategoryInformation> categories;
 }

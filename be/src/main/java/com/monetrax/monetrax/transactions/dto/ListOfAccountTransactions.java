@@ -19,8 +19,5 @@ import java.util.UUID;
 public class ListOfAccountTransactions {
     private AccountInformation account;
     private List<TransactionInformationPart> transactions;
-
-    // TODO
-    // Put alerts here also
 }
 

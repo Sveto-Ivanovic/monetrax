@@ -3,6 +3,9 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: monetrax
+  ai:
+    model:
+      chat: none
   h2:
     console:
       enabled: true

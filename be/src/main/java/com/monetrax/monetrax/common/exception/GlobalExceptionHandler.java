@@ -2,6 +2,7 @@ package com.monetrax.monetrax.common.exception;
 
 import com.monetrax.monetrax.accounts.exceptions.NoAccountDataToUpdate;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
+import com.monetrax.monetrax.ai.exceptions.AiProviderException;
 import com.monetrax.monetrax.ai.exceptions.EncryptDecryptException;
 import com.monetrax.monetrax.ai.exceptions.NoSuchApiKeyExistsException;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
@@ -303,4 +304,12 @@ public class GlobalExceptionHandler {
     public ErrorResponse handleNoSuchApiKeyExistsException(NoSuchApiKeyExistsException ex){
         return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), addCustomErrorToErrorResponse(ex.getMessage(), "ApiKeyNotFound"));
     }
+
+
+    @ExceptionHandler(AiProviderException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorResponse handleAiProviderException(AiProviderException ex){
+        return new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), addCustomErrorToErrorResponse(ex.getMessage(), "AIRelatedError"));
+    }
+
 }
