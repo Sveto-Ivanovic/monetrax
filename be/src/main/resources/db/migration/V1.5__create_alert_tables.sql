@@ -1,6 +1,6 @@
 CREATE TYPE alert_rule_type  AS ENUM ('LESS_OR_EQUAL', 'GREATER_OR_EQUAL', 'BETWEEN', 'EQUAL', 'LESS', 'GREATER');
 
-CREATE TABLE spending_alerts (
+CREATE TABLE IF NOT EXISTS spending_alerts (
                                  alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                                  user_id UUID NOT NULL REFERENCES user_table(user_id) ON DELETE CASCADE,
                                  account_id UUID REFERENCES accounts(account_id) ON DELETE CASCADE,
@@ -12,7 +12,7 @@ CREATE TABLE spending_alerts (
                                  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE alert_conditions (
+CREATE TABLE IF NOT EXISTS alert_conditions (
                                   condition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                                   alert_id UUID NOT NULL REFERENCES spending_alerts(alert_id) ON DELETE CASCADE,
                                   category_id UUID NOT NULL REFERENCES categories_table(category_id),

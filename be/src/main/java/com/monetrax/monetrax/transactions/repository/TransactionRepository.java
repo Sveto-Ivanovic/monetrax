@@ -1,6 +1,8 @@
 package com.monetrax.monetrax.transactions.repository;
 
+import com.monetrax.monetrax.analytics.dto.GroupByTypes;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
+import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionLineItemsEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,7 +26,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     @Query("select t from TransactionEntity t where t.user.userId = ?1")
     public List<TransactionEntity> fetchAllUserTransactions(UUID userId);
 
-    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt <= ?4")
+    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt < ?4")
     public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDate(UUID userId, UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
 
     @Query("select t from TransactionEntity t join fetch t.user join fetch t.account where t.transactionId in ?1")

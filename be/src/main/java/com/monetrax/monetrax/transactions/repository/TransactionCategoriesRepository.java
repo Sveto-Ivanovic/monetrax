@@ -24,6 +24,9 @@ public interface TransactionCategoriesRepository extends JpaRepository<Transacti
     @Query("select t from TransactionCategoriesEntity t where t.id.transactionId in ?1")
     List<TransactionCategoriesEntity> fetchAllTransactionCategoryIdsIn(List<UUID> transactionIds);
 
+    @Query("select t from TransactionCategoriesEntity t Join fetch t.category Join fetch t.transaction where t.id.transactionId in ?1")
+    List<TransactionCategoriesEntity> fetchAllTransactionCategoryIdsInWithJoin(List<UUID> transactionIds);
+
     @Query("select count(t) from TransactionCategoriesEntity t where t.id.transactionId = ?1")
     public int countTransactionCategories(UUID transactionId);
 

@@ -1,7 +1,7 @@
 CREATE TYPE category_kind  AS ENUM ('INCOME', 'EXPENSE', 'TRANSFER_FROM',
                           'ADJUSTMENT_PLUS', 'TRANSFER_TO', 'ADJUSTMENT_MINUS');
 
-create table categories_table (
+CREATE TABLE IF NOT EXISTS categories_table (
                             category_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
                             user_id uuid not null ,
                             category_type category_kind  not null,

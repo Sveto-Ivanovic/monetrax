@@ -22,4 +22,9 @@ public interface TransactionLineItemsRepository extends JpaRepository<Transactio
     @Modifying
     @Query("delete from TransactionLineItemsEntity t where t.transaction.transactionId = ?1")
     int deleteAllTransactionLineItemsByTransactionId(UUID transactionId);
+
+    @Query("select t from TransactionLineItemsEntity t  join fetch t.transaction  where t.transaction.transactionId in ?1")
+    public List<TransactionLineItemsEntity> fetchAllTransactionsLineProductsWithIn(List<UUID> transactionId);
+
+
 }

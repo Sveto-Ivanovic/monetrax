@@ -2,10 +2,7 @@ package com.monetrax.monetrax.categories.entity;
 
 import com.monetrax.monetrax.user.entity.UserEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -25,6 +22,7 @@ public class CategoryEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @EqualsAndHashCode.Exclude
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)

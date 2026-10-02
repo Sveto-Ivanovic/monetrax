@@ -23,6 +23,9 @@ public interface AccountRepository extends JpaRepository<AccountEntity, UUID> {
     @Query("Select a from AccountEntity a where a.user.userId = ?1")
     List<AccountEntity> getAllAccounts(UUID userId);
 
+    @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId in ?2")
+    List<AccountEntity> getAllAccountsByAccountIds(UUID userId, List<UUID> accountIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("Select a from AccountEntity a where a.user.userId = ?1 and a.accountId = ?2")
     Optional<AccountEntity> getAccount(UUID userId, UUID accountId);

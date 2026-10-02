@@ -1,15 +1,29 @@
 package com.monetrax.monetrax.transactions.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monetrax.monetrax.accounts.dto.AccountInformation;
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
 import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.accounts.mapper.AccountMapper;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
+import com.monetrax.monetrax.ai.entity.ApiKeysEntity;
+import com.monetrax.monetrax.ai.entity.KeyType;
+import com.monetrax.monetrax.ai.entity.MessageHistoryEntity;
+import com.monetrax.monetrax.ai.entity.MessageStatus;
+import com.monetrax.monetrax.ai.exceptions.AiProviderException;
+import com.monetrax.monetrax.ai.exceptions.NoSuchApiKeyExistsException;
+import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
+import com.monetrax.monetrax.ai.repository.MessageHistoryRepository;
+import com.monetrax.monetrax.ai.service.AiAPiService;
+import com.monetrax.monetrax.ai.service.impl.AiAPiServiceImpl;
+import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.categories.mapper.CategoryMapper;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
+import com.monetrax.monetrax.transactions.component.AiComponent;
 import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.*;
 import com.monetrax.monetrax.transactions.exceptions.IllegalStateDeletionException;
@@ -23,6 +37,9 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +48,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -52,8 +70,13 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountRepository accountRepository;
     private  final UserRepository userRepository;
     private final TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository;
+    private final ApiKeysRepository apiKeysRepository;
+    private final MessageHistoryRepository messageHistoryRepository;
+    private final AiAPiServiceImpl aiAPiService;
+    private final AiComponent aiComponent;
+    private final Validator validator;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -65,6 +88,13 @@ public class TransactionServiceImpl implements TransactionService {
         this.accountRepository = accountRepository;
         this.userRepository = userRepository;
         this.transactionRecurrenceRuleRepository = transactionRecurrenceRuleRepository;
+
+        // these last four were added for the AI transaction endpoint
+        this.apiKeysRepository = apiKeysRepository;
+        this.messageHistoryRepository = messageHistoryRepository;
+        this.aiAPiService = aiAPiService;
+        this.aiComponent = aiComponent;
+        this.validator = validator;
     }
 
     @AllArgsConstructor
@@ -258,6 +288,11 @@ public class TransactionServiceImpl implements TransactionService {
         //************************************************************************************************************************
         BigDecimal amountNative = transactionCreate.getAmount();
         //************************************************************************************************************************
+
+        if(!categoryKind.equals(CategoryKind.EXPENSE) && !transactionCreate.getLineInformation().isEmpty()){
+            throw new InvalidInputException("The additional information fields are only allowed for Expense category kinds.");
+        }
+
 
         // save transaction and get uuid
         TransactionEntity transactionEntity = globalTransactionMapper.fromTransactionCreateToTransactionEntity(transactionCreate,
@@ -546,5 +581,149 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("Transaction deleted successfully [transactionId={}, userId={}]", transactionId, userId);
         return new TransactionCreateUpdateResponse("Transaction successfully deleted.", transactionEntity.getTransactionId());
     }
+    // create transaction via AI
+    @Override
+    @Transactional
+    public TransactionCreateUpdateResponse createTransactionViaAi(TransactionCreateAIRequest transactionCreate, UUID userId, UUID accountId) {
+
+        log.info("AI transaction creation started for userId={}, accountId={}, model={}, messageLength={}",
+                userId, accountId, transactionCreate.getGeminiModel(),
+                transactionCreate.getMsg() != null ? transactionCreate.getMsg().length() : 0);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // get account and user
+        AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(() -> {
+            log.warn("AI transaction creation failed, no account found [userId={}, accountId={}]", userId, accountId);
+            return new NoSuchAccountFound("No such account exists!");
+        });
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("AI transaction creation failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: " + userId);
+        });
+        log.debug("Fetched user and account for AI transaction: userId={}, accountId={}, accountCurrency={}",
+                userId, accountId, account.getCurrency());
+
+        // extract transaction from user String
+        TransactionExtraction transactionExtraction;
+        if (transactionCreate.getGeminiModel() != null) {
+
+            // first fetch api key for gemini
+            ApiKeysEntity apiKeysEntity = apiKeysRepository.fetchApiKey(KeyType.GEMINI_API_KEY, userId).orElseThrow(() -> {
+                log.warn("AI transaction creation failed, no api key found [userId={}, keyType={}]", userId, KeyType.GEMINI_API_KEY);
+                return new NoSuchApiKeyExistsException("Gemini api key has not been inserted!");
+            });
+            log.debug("Fetched api key entity for userId={}, keyType={}", userId, KeyType.GEMINI_API_KEY);
+
+            // decrypt the key and call gemini ai (never log the key itself)
+            String geminiApiKey = aiAPiService.localDecrypt(apiKeysEntity.getApiKeyEncrypted(), userId, KeyType.GEMINI_API_KEY);
+            long startNanos = System.nanoTime();
+            try {
+                log.info("Calling Gemini for userId={}, model={}", userId, transactionCreate.getGeminiModel());
+                transactionExtraction = aiComponent.extractGemini(transactionCreate.getMsg(), account.getCurrency(), transactionCreate.getGeminiModel(), geminiApiKey);
+                log.info("Gemini call succeeded for userId={}, durationMs={}", userId, (System.nanoTime() - startNanos) / 1_000_000);
+            } catch (Exception e) {
+                // only the exception type is logged: the message/stack trace may contain request details
+                log.warn("Gemini call failed for userId={}, model={}, durationMs={}, errorType={}",
+                        userId, transactionCreate.getGeminiModel(), (System.nanoTime() - startNanos) / 1_000_000, e.getClass().getSimpleName());
+                throw new AiProviderException("AI request failed. Check your API key and quota.");
+            }
+
+            // this part here is just saving the message as history
+            String transactionExtractionString;
+            try {
+                transactionExtractionString = objectMapper.writeValueAsString(transactionExtraction);
+            } catch (JsonProcessingException e) {
+                log.error("Failed to serialize extraction result for userId={}", userId, e);
+                throw new RuntimeException(e);
+            }
+
+            // if error is present
+            if (transactionExtraction.getError() != null && !transactionExtraction.getError().contains("null")&& !transactionExtraction.getError().isBlank()) {
+                log.info("AI extraction returned an error for userId={}: {}", userId, transactionExtraction.getError());
+
+                MessageHistoryEntity messageHistoryEntity = MessageHistoryEntity.builder()
+                        .errorMessage(transactionExtraction.getError())
+                        .rawMessage(transactionCreate.getMsg())
+                        .apiKey(apiKeysEntity)
+                        .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                        .inputTokens(0)
+                        .outputTokens(0)
+                        .model(String.valueOf(transactionCreate.getGeminiModel()))
+                        .provider("Google")
+                        .status(MessageStatus.FAILED)
+                        .structuredOutput(transactionExtractionString)
+                        .user(user)
+                        .updatedAt(OffsetDateTime.now())
+                        .build();
+                messageHistoryRepository.save(messageHistoryEntity);
+                log.debug("Saved FAILED message history for userId={}", userId);
+
+                return TransactionCreateUpdateResponse.builder().msg(transactionExtraction.getError()).build();
+            } else {
+                log.info("AI extraction succeeded for userId={}: lineItems={}, currency={}",
+                        userId,
+                        transactionExtraction.getLineInformation() != null ? transactionExtraction.getLineInformation().size() : 0,
+                        transactionExtraction.getCurrency());
+
+                MessageHistoryEntity messageHistoryEntity = MessageHistoryEntity.builder()
+                        .errorMessage(null)
+                        .rawMessage(transactionCreate.getMsg())
+                        .apiKey(apiKeysEntity)
+                        .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
+                        .inputTokens(0)
+                        .outputTokens(0)
+                        .model(String.valueOf(transactionCreate.getGeminiModel()))
+                        .provider("Google")
+                        .status(MessageStatus.SUCCESS)
+                        .structuredOutput(transactionExtractionString)
+                        .user(user)
+                        .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
+                        .build();
+                messageHistoryRepository.save(messageHistoryEntity);
+                log.debug("Saved SUCCESS message history for userId={}", userId);
+
+                // we don't have an error and everything is extracted
+                // construct create transaction object so we can just pass it as input to the already finished method
+                TransactionCreate transactionCreate1 = TransactionCreate.builder()
+                        .additionalInfo(List.of())
+                        .amount(transactionExtraction.getAmount().setScale(2, RoundingMode.HALF_UP))
+                        .categories(transactionCreate.getCategories())
+                        .currency(transactionExtraction.getCurrency())
+                        .description(transactionExtraction.getDescription())
+                        .lineInformation(transactionExtraction.getLineInformation() != null
+                                ? transactionExtraction.getLineInformation() : new ArrayList<>())
+                        .name(transactionExtraction.getName())
+                        .transactionRecurrenceRule(transactionCreate.getTransactionRecurrenceRule())
+                        .customCreationDate(transactionCreate.getCustomCreationDate())
+                        .build();
+                log.debug("Built TransactionCreate from AI extraction for userId={}", userId);
+
+                // validate if everything is correct; if not, the message history is rolled back along with the transaction, which is acceptable
+                Set<ConstraintViolation<TransactionCreate>> violations = validator.validate(transactionCreate1);
+
+                if (!violations.isEmpty()) {
+                    log.warn("AI extraction failed validation for userId={}, violationCount={}, violations={}",
+                            userId,
+                            violations.size(),
+                            violations.stream()
+                                    .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                                    .toList());
+                    throw new ConstraintViolationException(violations);
+                }
+                log.debug("AI extraction passed validation for userId={}", userId);
+
+                TransactionCreateUpdateResponse response = createTransaction(transactionCreate1, userId, accountId);
+                log.info("AI transaction creation completed for userId={}, accountId={}, transactionId={}",
+                        userId, accountId, response.getTransactionId());
+                return response;
+            }
+        } else {
+            log.warn("AI transaction creation rejected, no supported model provided [userId={}]", userId);
+            throw new InvalidInputException("Currently only gemini ai transaction creation is supported");
+        }
+    }
+
+
 
 }

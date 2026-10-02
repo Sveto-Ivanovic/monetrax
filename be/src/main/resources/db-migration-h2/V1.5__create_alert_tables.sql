@@ -1,4 +1,4 @@
-CREATE TABLE spending_alerts (
+CREATE TABLE IF NOT EXISTS spending_alerts (
                                  alert_id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                  user_id UUID NOT NULL,
                                  account_id UUID,
@@ -11,8 +11,7 @@ CREATE TABLE spending_alerts (
                                  CONSTRAINT fk_spending_alerts_user FOREIGN KEY (user_id) REFERENCES user_table(user_id) ON DELETE CASCADE,
                                  CONSTRAINT fk_spending_alerts_account FOREIGN KEY (account_id) REFERENCES accounts(account_id) ON DELETE CASCADE
 );
-
-CREATE TABLE alert_conditions (
+CREATE TABLE IF NOT EXISTS alert_conditions (
                                   condition_id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                   alert_id UUID NOT NULL,
                                   category_id UUID NOT NULL,
