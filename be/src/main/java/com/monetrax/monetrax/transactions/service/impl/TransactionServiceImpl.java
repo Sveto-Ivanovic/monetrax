@@ -289,6 +289,11 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal amountNative = transactionCreate.getAmount();
         //************************************************************************************************************************
 
+        if(!categoryKind.equals(CategoryKind.EXPENSE) && !transactionCreate.getLineInformation().isEmpty()){
+            throw new InvalidInputException("The additional information fields are only allowed for Expense category kinds.");
+        }
+
+
         // save transaction and get uuid
         TransactionEntity transactionEntity = globalTransactionMapper.fromTransactionCreateToTransactionEntity(transactionCreate,
                 user,
@@ -641,7 +646,7 @@ public class TransactionServiceImpl implements TransactionService {
                         .errorMessage(transactionExtraction.getError())
                         .rawMessage(transactionCreate.getMsg())
                         .apiKey(apiKeysEntity)
-                        .createdAt(OffsetDateTime.now())
+                        .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .inputTokens(0)
                         .outputTokens(0)
                         .model(String.valueOf(transactionCreate.getGeminiModel()))
@@ -665,7 +670,7 @@ public class TransactionServiceImpl implements TransactionService {
                         .errorMessage(null)
                         .rawMessage(transactionCreate.getMsg())
                         .apiKey(apiKeysEntity)
-                        .createdAt(OffsetDateTime.now())
+                        .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .inputTokens(0)
                         .outputTokens(0)
                         .model(String.valueOf(transactionCreate.getGeminiModel()))
@@ -673,7 +678,7 @@ public class TransactionServiceImpl implements TransactionService {
                         .status(MessageStatus.SUCCESS)
                         .structuredOutput(transactionExtractionString)
                         .user(user)
-                        .updatedAt(OffsetDateTime.now())
+                        .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .build();
                 messageHistoryRepository.save(messageHistoryEntity);
                 log.debug("Saved SUCCESS message history for userId={}", userId);

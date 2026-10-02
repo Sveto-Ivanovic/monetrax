@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -149,7 +151,7 @@ public class AiAPiServiceImpl implements AiAPiService {
             log.info("The entity for the keyType={} exists.", keyType);
 
             ApiKeysEntity apiKeys = apiKeysEntityOptional.get();
-            apiKeys.setUpdatedAt(OffsetDateTime.now());
+            apiKeys.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
             apiKeys.setApiKeyEncrypted(localEncrypt(rawKey, userId, keyType));
             apiKeys.setKeyLast4(substring);
             apiKeysRepository.save(apiKeys);
@@ -164,10 +166,10 @@ public class AiAPiServiceImpl implements AiAPiService {
             ApiKeysEntity   apiKeysEntityToCreate = ApiKeysEntity.builder()
                     .apiKeyEncrypted(localEncrypt(rawKey, userId, keyType))
                     .active(true)
-                    .createdAt(OffsetDateTime.now())
+                    .createdAt(OffsetDateTime.now(ZoneOffset.UTC))
                     .keyLast4(substring)
                     .keyType(keyType)
-                    .updatedAt(OffsetDateTime.now())
+                    .updatedAt(OffsetDateTime.now(ZoneOffset.UTC))
                     .lastUsedAt(null)
                     .user(user)
                     .build();
