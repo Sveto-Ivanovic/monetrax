@@ -1,4 +1,4 @@
-CREATE TABLE categories_table (
+CREATE TABLE IF NOT EXISTS categories_table (
                                   category_id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                   user_id UUID NOT NULL,
                                   category_type VARCHAR(20) NOT NULL,

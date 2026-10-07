@@ -1,4 +1,4 @@
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
                           account_id  UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                           user_id UUID NOT NULL,
                           CONSTRAINT fk_accounts_user

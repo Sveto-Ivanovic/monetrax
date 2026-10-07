@@ -1,6 +1,11 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: monetrax
+  ai:
+    model:
+      chat: none
   h2:
     console:
       enabled: true
@@ -29,7 +34,15 @@ logging:
     org.springframework.security: DEBUG
 
 jwt:
-  secret: xIzd1FTr25wQNeoK6sdcvajx5HUmtzFSdI8Lft7nlDlg28MfdcGZJp7752bOIYRj
+  secret: ${JWT_SECRET}
   expiration: 3600000
   refreshExpirationMs: 86400000
   refreshTokenLength: 64
+
+aes-encryption:
+  sha-crypt: SHA-256
+  aes-algorithm: AES
+  aes-algorithm-gcm: AES/GCM/NoPadding
+  iv-length-encrypt: 12
+  tag-length-encrypt: 16
+  local-passphrase: ${LOCAL_PASSPHRASE}

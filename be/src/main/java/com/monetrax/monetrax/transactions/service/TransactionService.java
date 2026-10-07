@@ -10,4 +10,5 @@ public interface TransactionService {
     TransactionCreateUpdateResponse createTransaction(TransactionCreate transactionCreate, UUID userId, UUID accountId);
     TransactionCreateUpdateResponse updateTransaction(TransactionUpdate transactionUpdate, UUID userId, UUID transactionId);
     TransactionCreateUpdateResponse deleteTransaction(UUID userId, UUID transactionId);
+    TransactionCreateUpdateResponse createTransactionViaAi(TransactionCreateAIRequest transactionCreate, UUID userId, UUID accountId);
 }

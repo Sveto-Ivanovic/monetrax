@@ -1,4 +1,4 @@
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
                                 refresh_token_id     UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                 user_id              UUID NOT NULL,
                                 token_hash           VARCHAR(255) NOT NULL UNIQUE,

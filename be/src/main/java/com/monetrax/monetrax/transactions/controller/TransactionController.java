@@ -184,4 +184,20 @@ public class TransactionController {
             throw e;
         }
     }
+
+
+    @PostMapping("/ai/account/{account_id}/transaction/create")
+    public ResponseEntity<TransactionCreateUpdateResponse> createTransactionAI(@AuthenticationPrincipal CustomUserDetails customUserDetails, @PathVariable UUID account_id, @Valid @RequestBody TransactionCreateAIRequest transactionCreate) {
+        UUID userId = UUID.fromString(customUserDetails.getUserId());
+        log.info("Endpoint called: POST /transactions/ai/account/{}/transaction/create [userId={}]", account_id, userId);
+        try {
+            TransactionCreateUpdateResponse response = transactionService.createTransactionViaAi(transactionCreate,userId, account_id);
+            log.info("POST /transactions/ai/account/{}/transaction/create succeeded [userId={}]", account_id, userId);
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            log.error("POST /transactions/ai/account/{}/transaction/create failed [userId={}]", account_id, userId, e);
+            throw e;
+        }
+    }
+
 }

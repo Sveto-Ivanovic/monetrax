@@ -1,4 +1,4 @@
-CREATE TABLE transaction_recurrence_rules (
+CREATE TABLE IF NOT EXISTS transaction_recurrence_rules (
                                               recurrence_rule_id     UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
                                               source_transaction_id  UUID NOT NULL,
                                               recurrence_unit        VARCHAR(10) NOT NULL
