@@ -126,7 +126,13 @@ public class TransactionServiceImpl implements TransactionService {
 
         // Here we are checking if categories are correct
         // get one category which we will compare to the rest of selected ones and if one is different we will throw exception
-        final CategoryKind categoryKind = categoryEntityMap.get(selectedCategories.get(0).getCategoryId()).getCategoryType();
+        CategoryEntity categoryEntity = categoryEntityMap.get(selectedCategories.get(0).getCategoryId());
+        if(categoryEntity == null) {
+            log.warn("Category validation failed, invalid category selected [userId={}, categoryId={}]", userId, selectedCategories.get(0).getCategoryId());
+            throw new InvalidTransactionCreationException("One or more selected categories are invalid.");
+        }
+        final CategoryKind categoryKind = categoryEntity.getCategoryType();
+
         requestedCategoryInformationSet.forEach((e)->{
             CategoryEntity categoryItem = categoryEntityMap.get(e.getCategoryId());
             if(categoryItem == null) {
