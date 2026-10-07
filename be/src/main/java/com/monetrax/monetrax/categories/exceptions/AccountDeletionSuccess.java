@@ -1,4 +1,4 @@
-package com.monetrax.monetrax.categories;
+package com.monetrax.monetrax.categories.exceptions;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
