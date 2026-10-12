@@ -1,2 +1,33 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+body{
+background-color: #d9f1f2;
+background-image:
+        radial-gradient(
+          ellipse at 50% 35%,
+          rgba(240, 252, 251, 0.95) 0%,
+          rgba(220, 244, 245, 0.75) 45%,
+          transparent 80%
+        ),
+        radial-gradient(
+          ellipse at 10% 5%,
+          rgba(105, 195, 210, 0.35) 0%,
+          transparent 45%
+        ),
+        radial-gradient(
+          ellipse at 90% 85%,
+          rgba(120, 205, 215, 0.3) 0%,
+          transparent 50%
+        ),
+        linear-gradient(
+          180deg,
+          #b9e4e9 0%,
+          #e1f4f4 35%,
+          #d2edef 70%,
+          #bce5e9 100%
+        );
+
+
+}
+   
