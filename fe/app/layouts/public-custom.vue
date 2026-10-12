@@ -18,13 +18,12 @@ const items = ref<NavigationMenuItem[]>([
     icon: 'i-simple-icons-github',
     to: 'https://github.com/Sveto-Ivanovic/monetrax',
     target: '_blank'
-  },
-  {
-    label: 'Login',
-    icon: 'i-lucide-info',
-    to: '/login'
   }
 ])
+
+function redirectLogin() {
+  navigateTo('/login')
+}
 </script>
 
 
@@ -33,7 +32,7 @@ const items = ref<NavigationMenuItem[]>([
    
     <header class="navigation-header">
     
-        <div class="logo">
+        <div class="logo-wrapper">
             
             <span class="brand-mark" aria-hidden="true"> 
                 <span></span> 
@@ -47,15 +46,17 @@ const items = ref<NavigationMenuItem[]>([
         <div class="nav-links">
 
             <ULink :to="item.to" v-for="item in items" class="nav-element" :key="item.label">
-              {{item.label}}
+              <UIcon :name="item.icon" class="size-5" /> 
+              <span>
+                {{item.label}}
+              </span>
+              
             </ULink>
         
         </div>
 
 
-        <div class="login">
-            Log In
-        </div>
+      <UButton v-on:click="redirectLogin()" color="neutral" variant="outline" class="login" trailing-icon="i-lucide-arrow-right">Log In</UButton>
 
     </header>
 
@@ -81,10 +82,9 @@ const items = ref<NavigationMenuItem[]>([
 
 .navigation-header {
   position: fixed;
-  left: 0;
-  right: 0;
   top: 16px;
   z-index: 50;
+padding-bottom: 16px;
 
   display: flex;
   justify-content: space-between;
@@ -92,8 +92,8 @@ const items = ref<NavigationMenuItem[]>([
   padding-left: 1rem;
   padding-right: 1rem;
 
-  width: 100%;
-  border-bottom: 5px solid blue;
+  width: 50%;
+  border-bottom: 1px solid blue;
 }
 
 
@@ -145,7 +145,7 @@ const items = ref<NavigationMenuItem[]>([
     background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);
     -webkit-background-clip: text;
     background-clip: text;
-    font-size: 22px;
+    font-size: 26px;
     -webkit-text-fill-color: transparent;
     color: transparent;
     font-size: 24px;
@@ -160,14 +160,17 @@ const items = ref<NavigationMenuItem[]>([
 }
 
 .nav-element {
-  color: #475569;
-  font-size: 15px;
+  color: #727c8a;
+  font-size: 16px;
   padding: 9px 13px;
   border-radius: 9px;
 
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-family: 'Montserrat', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
   text-decoration: none;
 
   transition:
@@ -177,8 +180,8 @@ const items = ref<NavigationMenuItem[]>([
 
 .nav-element:hover {
   color: #253db8;
-  background-color: #eff4ff;
-}
+  background-color: #c7d8fc;
+box-shadow: inset 0 -1px 0 #253db8;}
 
 .login {
   display: inline-flex;
@@ -189,11 +192,12 @@ const items = ref<NavigationMenuItem[]>([
   padding: 10px 19px;
   border-radius: 10px;
 
-  background: #111b55;
-  color: #ffffff;
+  border: 1px solid #415bee;
+  color: #2561e0;
+  background: transparent;
 
   font-family: 'Montserrat', sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
 
   cursor: pointer;
@@ -204,7 +208,7 @@ const items = ref<NavigationMenuItem[]>([
 }
 
 .login:hover {
-  background: #253db8;
+  background-color: #ccdefa;
   box-shadow: 0 5px 14px rgba(37, 61, 184, 0.2);
   transform: translateY(-1px);
 }
@@ -216,6 +220,39 @@ const items = ref<NavigationMenuItem[]>([
   box-sizing: border-box;
   padding-top: 110px;
 }
+
+ .logo-wrapper {
+    gap: 16px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+  }
+
+
+
+
+@media (max-width: 1600px) {
+.navigation-header {
+    width: 50%;
+  }
+}
+
+
+@media (max-width: 1250px) {
+.navigation-header {
+    width: 80%;
+  }
+}
+
+
+
+@media (max-width: 830px) {
+.navigation-header {
+    width: 100%;
+  }
+}
+
 
 
 @media (max-width: 640px) {
@@ -229,8 +266,12 @@ const items = ref<NavigationMenuItem[]>([
     border-radius: 14px;
   }
 
-  .logo {
+  .logo-wrapper {
     gap: 7px;
+    display: flex;
+    flex-direction: row;
+       justify-content: center;
+    align-items: center;
   }
 
   .brand-mark {

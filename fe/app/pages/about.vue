@@ -7,12 +7,12 @@
 <script setup lang="ts">
 declare module 'nuxt/app' {
   interface NuxtLayouts {
-    'public': unknown
+    'publicCustom': unknown
   }
 }
 
 
 definePageMeta({
-  layout: 'public',
+  layout: 'public-custom',
 })
 </script>

@@ -1,7 +1,26 @@
 <template>
-    <div>
-        Home Page
+  <div class="page-wrapper">
+    
+    <div class="hero-section">
+        <div class="hero-subsection">
+          <span></span>
+          <span></span>
+          <span></span>
+          <div>
+
+          </div>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="example-graph">
+        
+        
+        </div>
     </div>
+
+
+</div>  
 </template>
 
 
@@ -9,13 +28,13 @@
 
 declare module 'nuxt/app' {
   interface NuxtLayouts {
-    'public': unknown
+    "publicCustom": unknown
   }
 }
 
 
 definePageMeta({
-  layout: 'public',
+  layout: 'public-custom',
 })
 
 </script>
