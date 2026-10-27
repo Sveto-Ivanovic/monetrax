@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from '@nuxt/ui'
 
-const items = ref<NavigationMenuItem[]>([
+interface NavItem {
+  label: string;
+  icon: string;
+  to: string;
+  target?: string;
+}
+
+const items = ref<NavItem[]>([
   {
     label: 'Home',
     icon: 'i-lucide-home',
@@ -113,10 +119,6 @@ padding-bottom: 16px;
   -webkit-backdrop-filter: blur(24px);
 }
 
-.page-main {
-  min-height: 100vh;
-  padding-top: 6rem;
-}
 
 .brand-mark { 
     width: 27px; 
@@ -215,7 +217,7 @@ box-shadow: inset 0 -1px 0 #253db8;}
 
 
 .page-main {
-  width: 100%;
+  width: 80%;
   min-height: 100vh;
   box-sizing: border-box;
   padding-top: 110px;
