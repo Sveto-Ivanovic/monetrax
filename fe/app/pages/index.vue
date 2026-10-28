@@ -47,6 +47,117 @@
             </span>
 
           </div>
+
+
+          <div class="graph-example"> 
+            <div class="concentric-circle1"> </div>
+            <div class="concentric-circle2"> </div>
+            <div class="example-analytic"> 
+
+              <div class="topline">
+                <span class="txt-style-topline"> Total Balance </span>
+                <br />
+                <span class="txt-style-amount"> € 24,680.50 </span>
+              </div>
+             
+              <div class="balance-caption">
+                <span class="positive">
+                  ↗ 8.2%
+                </span> 
+                <span>
+                  compared to last month
+                </span>
+              </div>
+
+              <div class="chart"> 
+                <div class="grid"> 
+                  <i />
+                  <i />
+                  <i />
+                </div>
+              
+
+             <svg viewBox="0 0 220 160" preserveAspectRatio="none" role="presentation">
+                  
+                  <defs>
+                    <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#5eb1fa" stop-opacity="0.35" />
+                      <stop offset="100%" stop-color="#5eb1fa" stop-opacity="0" />
+                    </linearGradient>
+                  </defs>
+
+                  <polygon
+                      fill="url(#area-fill)"
+                      stroke="none"
+                      points="
+                        0,120
+                        40,60
+                        80,80
+                        100,20
+                        140,30
+                        220,80
+                        220,160
+                        0,160"/>
+
+                  <polyline
+                    fill="none"
+                    stroke="#5eb1fa"
+                    stroke-width="2"
+                    points="
+                      0,120
+                      40,60
+                      80,80
+                      100,20
+		                  140, 30
+		                  220, 80
+			              "/>
+
+
+
+              </svg>
+
+              
+              </div>
+
+              <div class="chart-months" aria-hidden="true">
+                <span>May</span>
+                <span>Jun</span>
+                <span>Jul</span>
+                <span>Aug</span>
+                <span>Sep</span>
+                <span>Oct</span>
+              </div>
+            
+            
+            <div class="graph-divider"></div>
+
+
+            <div class="account-section"> 
+              <span class="account-bank-icon">⌂</span>
+              <span class="account-name">
+                Everyday account<small>Checking ·•• 4821</small>
+              </span>
+              <strong>€ 8,420.00</strong>
+
+            </div>
+            <div class="account-section"> 
+              <span class="account-bank-icon">⌂</span>
+              <span class="account-name">
+                Savings account<small>Checking ·•• 9581</small>
+              </span>
+              <strong>€ 20,620.50</strong>
+
+            </div>
+
+            </div>
+          
+          </div>
+
+
+
+
+
+
          
         <div>
 
@@ -146,5 +257,156 @@ definePageMeta({
     border-color: transparent;
     cursor: pointer;
   }
+
+  .graph-example{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap:16px;
+    justify-content: center;
+    align-items: center;
+  }
+
+
+  .concentric-circle1{
+    width: 490px;
+    height: 490px;
+    position: absolute;
+    z-index: -1;
+    border: 1px solid #95f3f3;
+    border-radius: 50%;
+  }
+
+
+    .concentric-circle2{
+    width: 540px;
+    height: 540px;
+    position: absolute;
+    z-index: -1;
+    border: 1px solid #82f3f3;
+    border-radius: 50%;
+  }
+
+  .example-analytic{
+    width: min(440px, 85%);
+    padding: 26px 30px;
+    background: #fff;
+    border: 1px solid #edf1ed;
+    border-radius: 16px;
+    box-shadow: 0 24px 65px #34574a1a, 0 4px 12px #34574a08;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topline{
+    width:100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .txt-style-topline{
+    color: #99a7a0;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 1.05px;
+  }
+
+  .txt-style-amount{
+    margin-top: 6px;
+    color: #1c3834;
+    font-size: 30px;
+    font-weight: 680;
+    letter-spacing: -1.4px;
+  }
+
+.balance-caption {
+    margin-top: 7px;
+    color: #a0aba5;
+    font-size: 9px;
+}
+
+
+.positive {
+    color: #369a72;
+    font-weight: 750;
+    margin-right: 5px;
+}
+
+.chart{
+  position: relative;
+  height: 150px;
+  padding-top: 24px;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.grid{
+  position: absolute;
+  inset: 0;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+
+.grid i { border-top: 1px dashed #ecf0ed; }
+
+.chart-months {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 7px;
+    color: #a0aaa5;
+    font-size: 8px;
+}
+.graph-divider{
+    height: 1px;
+    margin: 17px 0 8px;
+    background: #eff2ef;
+}
+
+
+.account-section{
+display:flex;
+gap: 16px;
+allign-items: center;
+    padding-top: 16px;
+
+}
+
+.account-bank-icon {
+    background-color: #cdd5ed;
+    color: #1e1185;
+    font-size: 17px;
+    padding: 2px 11px;
+    border-radius: 8px;
+}
+
+
+.account-name {
+    flex: 1;
+    color: #004195;
+    font-size: 10px;
+    font-weight: 650;
+}
+
+.account-name small {
+    display: block;
+    margin-top: 4px;
+    color: #a0aaa5;
+    font-size: 8px;
+    font-weight: 450;
+}
+
+.account-section strong {
+    color: #004195;
+    font-size: 10px;
+    font-weight: 700;
+}
 
 </style>
