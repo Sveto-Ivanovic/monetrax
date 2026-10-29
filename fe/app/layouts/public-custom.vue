@@ -87,7 +87,7 @@ function redirectLogin() {
 }
 
 .navigation-header {
-  position: fixed;
+  /*position: fixed;*/
   top: 16px;
   z-index: 50;
 padding-bottom: 16px;
@@ -99,7 +99,7 @@ padding-bottom: 16px;
   padding-right: 1rem;
 
   width: 50%;
-  border-bottom: 1px solid blue;
+  border-bottom: 1px solid rgb(172, 204, 240);
 }
 
 
@@ -217,7 +217,7 @@ box-shadow: inset 0 -1px 0 #253db8;}
 
 
 .page-main {
-  width: 80%;
+  width: 60%;
   min-height: 100vh;
   box-sizing: border-box;
   padding-top: 110px;
@@ -238,12 +238,20 @@ box-shadow: inset 0 -1px 0 #253db8;}
 .navigation-header {
     width: 50%;
   }
+
+  .page-main {
+  width: 70%;
+  }
 }
 
 
 @media (max-width: 1250px) {
 .navigation-header {
     width: 80%;
+  }
+
+    .page-main {
+  width: 80%;
   }
 }
 
@@ -252,6 +260,10 @@ box-shadow: inset 0 -1px 0 #253db8;}
 @media (max-width: 830px) {
 .navigation-header {
     width: 100%;
+  }
+
+    .page-main {
+  width: 90%;
   }
 }
 
@@ -266,6 +278,7 @@ box-shadow: inset 0 -1px 0 #253db8;}
     gap: 10px;
     padding: 12px;
     border-radius: 14px;
+    flex-wrap: wrap;
   }
 
   .logo-wrapper {
@@ -299,9 +312,16 @@ box-shadow: inset 0 -1px 0 #253db8;}
     padding: 9px 12px;
     font-size: 12px;
   }
+
+    .page-main {
+  width: 90%;
+  }
 }
 
 @media (max-width: 420px) {
+
+
+
   .navigation-header {
     flex-wrap: wrap;
   }
