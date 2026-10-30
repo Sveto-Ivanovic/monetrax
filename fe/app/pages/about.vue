@@ -1,12 +1,12 @@
 <template>
   <div class="au-page">
 
-    <header class="au-header">
+    <div class="au-header">
       <h1 class="au-title">About us</h1>
       <p class="au-subtitle">
         A full-stack web application built to be fast, reliable, and easy to run — from the Java backend to the Vue frontend.
       </p>
-    </header>
+    </div>
 
     <section class="au-columns">
       <div class="au-column">
@@ -178,7 +178,7 @@ definePageMeta({
   padding: 8px 18px;
   border: 1px solid #384e68;
   border-radius: 999px;
-  background: #b8b4f4;
+  background: #b4c8f4;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 14px;
   color: #2a3555;
