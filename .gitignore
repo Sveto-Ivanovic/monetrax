@@ -31,3 +31,24 @@ build/
 
 ### VS Code ###
 .vscode/
+
+.env
+
+node_modules/
+dist/
+.nuxt/
+.output/
+.vite/
+
+.npm/
+.pnpm-store/
+
+.env
+.env.*
+!.env.example
+!.env.sample
+*.log
+pnpm-debug.log*
+tmp/
+temp/
+
