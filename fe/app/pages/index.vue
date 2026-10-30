@@ -206,16 +206,35 @@
             intuitive tools that help you stay on track.</span>
         </div>
 
+        <div class="banner">
+          <div class="banner-content">
+            <span class="banner-eyebrow">
+              <div class="banner-dot" />
+              YOUR NEXT CHAPTER STARTS HERE
+            </span>
+            <span class="banner-title">Feel good about your money.</span>
+          </div>
+
+          <div class="banner-aside">
+            <span class="banner-text">
+              A little more clarity can change a lot. Get started with Monetrax today.
+            </span>
+
+            <UButton
+              class="btn"
+              label="Go to your dashboard"
+              trailing-icon="i-lucide-arrow-right"
+              to="/dashboard"
+            />
+          </div>
+        </div>
+
+
+
 
 
       </div>
-
-
-
-
     </div>
-
-
   </div>
 </template>
 
@@ -599,6 +618,86 @@ definePageMeta({
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.banner {
+  background-color: #aee1e1;
+  border-radius: 24px;
+  padding: 32px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.banner-content {
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.banner-eyebrow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #565758;
+  letter-spacing: 0.1cap;
+}
+
+.banner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #004195;
+  box-shadow: rgb(92 161 233) 0 0 8px 1px;
+}
+
+.banner-title {
+  padding-top: 16px;
+  color: #002658;
+  font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.banner-aside {
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner-text {
+  margin: 0 0 17px;
+  color: #46474b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.banner-aside .btn {
+  justify-content: center;
+  gap: 21px;
+  min-height: 48px;
+  padding: 0 20px;
+  border-radius: 8px;
+  background: #06055c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.banner-aside .btn:hover {
+  background: #06055c;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(6, 5, 92, 0.3);
+}
+
+.banner-aside .btn:active {
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1050px) {
