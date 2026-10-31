@@ -32,8 +32,8 @@
           <br />
 
           <div class="main-button-wrapper">
-            <UButton trailing-icon="i-lucide-arrow-right" size="md" class="get-started">Get Started</UButton>
-            <UButton trailing-icon="i-lucide-arrow-down" size="md" variant="outline" class="explore">Explore Monetrax
+            <UButton trailing-icon="i-lucide-arrow-right" size="md" class="get-started" v-on:click="handleGetStarted()">Get Started</UButton>
+            <UButton trailing-icon="i-lucide-arrow-down" size="md" variant="outline" class="explore" v-on:click="handleExplore()">Explore Monetrax
             </UButton>
 
           </div>
@@ -104,12 +104,7 @@
 		                  140, 30
 		                  220, 80
 			              " />
-
-
-
               </svg>
-
-
             </div>
 
             <div class="chart-months" aria-hidden="true">
@@ -181,7 +176,7 @@
       <div class="feature-section">
         <div class="feature-item">
           <div class="feature-icon1">
-          <UIcon name="i-lucide-pie-chart" size="24" style="color: darkgreen;" />
+            <UIcon name="i-lucide-pie-chart" size="24" style="color: darkgreen;" />
           </div>
           <span class="feature-title">All your accounts in one view</span>
           <span class="feature-description">Connect your bank accounts, credit cards, and investments to see your
@@ -198,7 +193,7 @@
         </div>
 
         <div class="feature-item">
-            <div class="feature-icon3">
+          <div class="feature-icon3">
             <UIcon name="i-lucide-calendar" size="24" style="color: darkblue;" />
           </div>
           <span class="feature-title">Plan with confidence</span>
@@ -206,34 +201,28 @@
             intuitive tools that help you stay on track.</span>
         </div>
 
-        <div class="banner">
-          <div class="banner-content">
-            <span class="banner-eyebrow">
-              <div class="banner-dot" />
-              YOUR NEXT CHAPTER STARTS HERE
-            </span>
-            <span class="banner-title">Feel good about your money.</span>
-          </div>
+      </div>
 
-          <div class="banner-aside">
-            <span class="banner-text">
-              A little more clarity can change a lot. Get started with Monetrax today.
-            </span>
-
-            <UButton
-              class="btn"
-              label="Go to your dashboard"
-              trailing-icon="i-lucide-arrow-right"
-              to="/dashboard"
-            />
-          </div>
+      <div class="banner">
+        <div class="banner-content">
+          <span class="banner-eyebrow">
+            <div class="banner-dot" />
+            YOUR NEXT CHAPTER STARTS HERE
+          </span>
+          <span class="banner-title">Feel good about your money.</span>
         </div>
 
+        <div class="banner-aside">
+          <span class="banner-text">
+            A little more clarity can change a lot. Get started with Monetrax today.
+          </span>
 
-
-
-
+          <UButton class="btn" label="Go to your dashboard" trailing-icon="i-lucide-arrow-right" to="/dashboard" />
+        </div>
       </div>
+
+
+
     </div>
   </div>
 </template>
@@ -251,6 +240,17 @@ declare module 'nuxt/app' {
 definePageMeta({
   layout: 'public-custom',
 })
+
+function handleGetStarted() {
+  navigateTo('/register')
+}
+
+function handleExplore() {
+  const element = document.querySelector('.trust-section');
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth' });
+  }
+}
 
 </script>
 
@@ -520,7 +520,7 @@ definePageMeta({
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  
+
   text-align: center;
 }
 
@@ -560,7 +560,7 @@ definePageMeta({
   background-color: #b9c7f3;
   padding: 24px;
   border-radius: 24px;
-} 
+}
 
 .feature-item:nth-of-type(1) .feature-title {
   font-size: 16px;
@@ -707,5 +707,15 @@ definePageMeta({
     gap: 64px;
   }
 
+  .feature-section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .banner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
 }
 </style>

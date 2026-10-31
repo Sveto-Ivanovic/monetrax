@@ -12,14 +12,14 @@ const items = ref<NavItem[]>([
     label: 'Home',
     icon: 'i-lucide-home',
     to: '/'
-    
+
   },
   {
     label: 'About',
     icon: 'i-lucide-info',
     to: '/about'
   },
- {
+  {
     label: 'GitHub',
     icon: 'i-simple-icons-github',
     to: 'https://github.com/Sveto-Ivanovic/monetrax',
@@ -35,34 +35,35 @@ function redirectLogin() {
 
 <template>
   <div class="page-wrapper">
-   
-    <header class="navigation-header">
-    
-        <div class="logo-wrapper">
-            
-            <span class="brand-mark" aria-hidden="true"> 
-                <span></span> 
-                <span></span> 
-                <span></span>
-            </span>
 
-            <span class="logo-txt"> Monetrax </span>
-        </div>
+    <header class="navigation-header" style="padding-top: 16px;">
 
-        <div class="nav-links">
+      <div class="logo-wrapper">
 
-            <ULink :to="item.to" v-for="item in items" class="nav-element" :key="item.label">
-              <UIcon :name="item.icon" class="size-5" /> 
-              <span>
-                {{item.label}}
-              </span>
-              
-            </ULink>
-        
-        </div>
+        <span class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+
+        <span class="logo-txt"> Monetrax </span>
+      </div>
+
+      <div class="nav-links">
+
+        <ULink :to="item.to" v-for="item in items" class="nav-element" :key="item.label">
+          <UIcon :name="item.icon" class="size-5" />
+          <span>
+            {{ item.label }}
+          </span>
+
+        </ULink>
+
+      </div>
 
 
-      <UButton v-on:click="redirectLogin()" color="neutral" variant="outline" class="login" trailing-icon="i-lucide-arrow-right">Log In</UButton>
+      <UButton v-on:click="redirectLogin()" color="neutral" variant="outline" class="login"
+        trailing-icon="i-lucide-arrow-right">Log In</UButton>
 
     </header>
 
@@ -71,13 +72,31 @@ function redirectLogin() {
       <slot />
     </main>
 
+    <footer style="width: 100%; display: flex; justify-content: center; align-items: center;">
+
+      <div class="navigation-footer">
+        <div class="logo-wrapper">
+
+          <span class="brand-mark" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+
+          <span class="logo-txt"> Monetrax </span>
+        </div>
+        <span> &copy; 2026 Monetrax. All rights reserved. </span>
+      </div>
+
+
+    </footer>
+
   </div>
 </template>
 
 
 
 <style scoped>
-
 .page-wrapper {
   width: 100%;
   display: flex;
@@ -90,7 +109,7 @@ function redirectLogin() {
   /*position: fixed;*/
   top: 16px;
   z-index: 50;
-padding-bottom: 16px;
+  padding-bottom: 16px;
 
   display: flex;
   justify-content: space-between;
@@ -120,41 +139,51 @@ padding-bottom: 16px;
 }
 
 
-.brand-mark { 
-    width: 27px; 
-    height: 27px; 
-    display: flex; 
-    align-items: end; 
-    justify-content: center; 
-    gap: 3px; 
-    padding: 5px; 
-    background: #050a47; 
-    border-radius: 8px; }
-
-.brand-mark span { 
-    display: block; 
-    width: 4px; 
-    border-radius: 3px; 
-    background: #a8ead2; }
-
-.brand-mark span:nth-child(1) { height: 8px; }
-.brand-mark span:nth-child(2) { height: 13px; }
-.brand-mark span:nth-child(3) { height: 10px; }
-
-.logo-txt {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600;
-    background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    font-size: 26px;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    font-size: 24px;
-    letter-spacing: -0.8px;
+.brand-mark {
+  width: 27px;
+  height: 27px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px;
+  background: #050a47;
+  border-radius: 8px;
 }
 
-.nav-links{
+.brand-mark span {
+  display: block;
+  width: 4px;
+  border-radius: 3px;
+  background: #a8ead2;
+}
+
+.brand-mark span:nth-child(1) {
+  height: 8px;
+}
+
+.brand-mark span:nth-child(2) {
+  height: 13px;
+}
+
+.brand-mark span:nth-child(3) {
+  height: 10px;
+}
+
+.logo-txt {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  background: linear-gradient(90deg, rgba(2, 0, 36, 1) 0%, rgba(9, 9, 121, 1) 35%, rgba(0, 212, 255, 1) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  font-size: 26px;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  font-size: 24px;
+  letter-spacing: -0.8px;
+}
+
+.nav-links {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -183,7 +212,8 @@ padding-bottom: 16px;
 .nav-element:hover {
   color: #253db8;
   background-color: #c7d8fc;
-box-shadow: inset 0 -1px 0 #253db8;}
+  box-shadow: inset 0 -1px 0 #253db8;
+}
 
 .login {
   display: inline-flex;
@@ -210,7 +240,7 @@ box-shadow: inset 0 -1px 0 #253db8;}
 }
 
 .login:hover {
-  background-color: #ccdefa;
+  /* background-color: #ccdefa; */
   box-shadow: 0 5px 14px rgba(37, 61, 184, 0.2);
   transform: translateY(-1px);
 }
@@ -223,47 +253,66 @@ box-shadow: inset 0 -1px 0 #253db8;}
   padding-top: 110px;
 }
 
- .logo-wrapper {
-    gap: 16px;
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-  }
+.logo-wrapper {
+  gap: 16px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
 
 
-
+.navigation-footer {
+  width: 60%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  border-top: 1px solid rgb(172, 204, 240);
+}
 
 @media (max-width: 1600px) {
-.navigation-header {
+  .navigation-header {
     width: 50%;
   }
 
   .page-main {
-  width: 70%;
+    width: 70%;
+  }
+
+  .navigation-footer {
+    width: 70%;
   }
 }
 
 
 @media (max-width: 1250px) {
-.navigation-header {
+  .navigation-header {
     width: 80%;
   }
 
-    .page-main {
-  width: 80%;
+  .page-main {
+    width: 80%;
+  }
+
+  .navigation-footer {
+    width: 80%;
   }
 }
 
 
 
 @media (max-width: 830px) {
-.navigation-header {
+  .navigation-header {
     width: 100%;
   }
 
-    .page-main {
-  width: 90%;
+  .page-main {
+    width: 90%;
+  }
+
+  .navigation-footer {
+    width: 90%;
   }
 }
 
@@ -285,7 +334,7 @@ box-shadow: inset 0 -1px 0 #253db8;}
     gap: 7px;
     display: flex;
     flex-direction: row;
-       justify-content: center;
+    justify-content: center;
     align-items: center;
   }
 
@@ -313,8 +362,12 @@ box-shadow: inset 0 -1px 0 #253db8;}
     font-size: 12px;
   }
 
-    .page-main {
-  width: 90%;
+  .page-main {
+    width: 90%;
+  }
+
+  .mavigation-footer {
+    width: 90%;
   }
 }
 
@@ -337,7 +390,6 @@ box-shadow: inset 0 -1px 0 #253db8;}
   .page-main {
     padding-top: 120px;
   }
+
 }
-
-
 </style>
