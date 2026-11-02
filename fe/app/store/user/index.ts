@@ -35,7 +35,7 @@ export const useUserStore = defineStore("userStore", () => {
   function setUserInfo(data: UserInformationDetailed) {
     userInfo.value = data
     hasUserInfo.value = true
-    if (!!userInfo.value?.aiApiKeys && userInfo.value?.aiApiKeys>0) {
+    if (!!userInfo.value?.aiApiKeys && userInfo.value?.aiApiKeys.length>0) {
       hasApiKey.value = true
     }
     else {
