@@ -31,6 +31,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
@@ -109,10 +110,11 @@ public class UserControllerTest {
     public void getUserSuccessTest() throws Exception{
         UUID searchUUID = userEntityTest.getUserId();
         String path = "/user/me";
-        when(userService.fetchUserById(searchUUID)).thenReturn(userInformationTest);
+        UserInformationDetailed userInformationDetailed = UserInformationDetailed.builder().userInfo(userInformationTest).aiApiKeys(new ArrayList<>()).build();
+        when(userService.fetchUserById(searchUUID)).thenReturn(userInformationDetailed);
 
         CustomUserDetails principal = new CustomUserDetails(userEntityTest);
-        String userInformationJsonString = objectMapper.writeValueAsString(userInformationTest);
+        String userInformationJsonString = objectMapper.writeValueAsString(userInformationDetailed);
         mockMvc.perform(get(path).with(user(principal)))
                 .andExpect(status().isOk())
                 .andExpect(content().json(userInformationJsonString));

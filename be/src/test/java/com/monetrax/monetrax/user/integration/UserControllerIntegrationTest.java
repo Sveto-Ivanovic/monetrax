@@ -80,10 +80,11 @@ public class UserControllerIntegrationTest {
         headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<UserInformation> resGet = restTemplate.exchange(
-                baseUrl + "/user/me", HttpMethod.GET, entity, UserInformation.class);
+        ResponseEntity<UserInformationDetailed> resGet = restTemplate.exchange(
+                baseUrl + "/user/me", HttpMethod.GET, entity, UserInformationDetailed.class);
 
-        assertEquals(resGet.getBody(), resUserInformation);
+        assert resGet.getBody() != null;
+        assertEquals(resGet.getBody().getUserInfo(), resUserInformation);
 
     }
 
