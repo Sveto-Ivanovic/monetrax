@@ -20,3 +20,14 @@ export interface UserInformationDetailed {
     userInfo: UserInformation;
     aiApiKeys: string[];
 }
+
+export interface CommonErrorResponse {
+    status: number;
+    errors: Error[]; 
+}
+
+export interface Error{
+    message: string;
+    clue: string;
+    
+}
