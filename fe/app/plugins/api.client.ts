@@ -56,7 +56,10 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     async onRequest({ options, request }) {
 
-      if(PUBLIC_ENDPOINTS.includes(request.pathname)){
+      console.log("Request structure: "+ request as string)
+      console.log("Base URL: "+ options.baseURL)
+      if (PUBLIC_ENDPOINTS.includes(request as string)) {
+        console.log("Public endpoint, skipping auth check.")
         return
       }
 

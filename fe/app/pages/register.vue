@@ -89,7 +89,7 @@
             </div>
 
             <div class="flex justify-center">
-                <UButton type="submit" class="submit-button">
+                <UButton type="submit" class="submit-button" :loading="is_loading" :disabled="!acceptTerms || is_loading">
                     Submit
                 </UButton>
             </div>
@@ -111,6 +111,8 @@
 import * as v from 'valibot'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { CalendarDate, today } from '@internationalized/date'
+import { apiRouter } from '~/services/serviceWrapper'
+import type { UserRegistration } from '~/services/usermanagement/types'
 
 
 const show = ref(false)
@@ -173,11 +175,32 @@ function redirectHome() {
     navigateTo('/')
 }
 
+const api = apiRouter.userApi()
+const registerUserMutation = api.registerUser()
+
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
     is_loading.value = true
     console.log(event.data)
-    /* small delay to simulate a network request */
-    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    const registrationData: UserRegistration = {
+        userName: event.data.username,
+        name: event.data.name,
+        surname: event.data.surname,
+        dateOfBirth: event.data.dateOfBirth.toDate('UTC').toISOString().split('T')[0] ?? '',
+        userEmail: event.data.email,
+        password: event.data.password
+    }
+    try {
+        const response = await registerUserMutation.mutateAsync(registrationData)
+        console.log('Registration successful:', response)
+    } catch (error) {
+        console.error('Registration failed:', error)
+    } finally {
+        is_loading.value = false
+    }
+    
+
     is_loading.value = false
 }
 

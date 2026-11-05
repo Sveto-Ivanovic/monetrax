@@ -1,3 +1,5 @@
+import { useUserStore } from "~/store/user"
+
 export default defineNuxtRouteMiddleware((to) => {
   const userStore = useUserStore()
   const publicRoutes = ['/login', '/register', '/', '/about']
