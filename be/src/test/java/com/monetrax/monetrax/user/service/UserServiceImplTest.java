@@ -150,7 +150,6 @@ public class UserServiceImplTest {
     @Test
     public void updateUserSuccessTest(){
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
                 .userName("updateduser")
                 .name("Updated")
                 .surname("Person")
@@ -160,7 +159,7 @@ public class UserServiceImplTest {
 
         UserEntity updatedUserEntity = UserEntity.builder()
                 .userId(userEntityTest.getUserId())
-                .userEmail(userUpdate.getUserEmail())
+                .userEmail(userEntityTest.getUserEmail())
                 .userName(userUpdate.getUserName())
                 .name(userUpdate.getName())
                 .surname(userUpdate.getSurname())
@@ -175,7 +174,6 @@ public class UserServiceImplTest {
                 .additionalInfo(userEntityTest.getAdditionalInfo())
                 .build();
 
-        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(false);
         when(userMapper.toUserInformation(any(UserEntity.class))).thenReturn(userInformationTest);
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
         when(userRepository.save(any(UserEntity.class))).thenReturn(updatedUserEntity);
@@ -185,34 +183,15 @@ public class UserServiceImplTest {
         assertNotNull(res);
         assertEquals(userInformationTest, res);
 
-        verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
         verify(userRepository).findById(userEntityTest.getUserId());
         verify(userRepository).save(any(UserEntity.class));
     }
 
 
-    @Test
-    public void updateUserEmailAlreadyExistsFailureTest() {
-        UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
-                .userName("updateduser")
-                .name("Updated")
-                .surname("Person")
-                .dateOfBirth(LocalDate.of(1992, 5, 15))
-                .build();
-
-        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(true);
-        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
-
-        assertThrows(EmailAlreadyExistsException.class, ()->{
-            userService.updateUser(userUpdate, userEntityTest.getUserId());
-        });
-    }
 
     @Test
     public void updateUserThatUserDoesNotExistFailureTest() {
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
                 .userName("updateduser")
                 .name("Updated")
                 .surname("Person")

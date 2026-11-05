@@ -228,7 +228,6 @@ public class UserControllerTest {
         CustomUserDetails principal = new CustomUserDetails(userEntityTest);
 
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
                 .userName("updateduser")
                 .name("Updated")
                 .surname("Person")
@@ -237,7 +236,7 @@ public class UserControllerTest {
 
         UserInformation userInformation = UserInformation.builder()
                 .userId(userEntityTest.getUserId())
-                .userEmail(userUpdate.getUserEmail())
+                .userEmail(userEntityTest.getUserEmail())
                 .userName(userUpdate.getUserName())
                 .name(userUpdate.getName())
                 .surname(userUpdate.getSurname())

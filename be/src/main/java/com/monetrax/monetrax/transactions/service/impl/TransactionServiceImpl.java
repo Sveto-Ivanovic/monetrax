@@ -255,7 +255,9 @@ public class TransactionServiceImpl implements TransactionService {
 
             // git list of all products in the account, i added this for autocomplete for when user wants to type their own bought products
             listOfProducts = transactionLineItemsRepository.fetchAllTransactionsLineProductsWithIn(allTransactionIds)
-                    .stream().map(TransactionLineItemsEntity::getProductName).toList();
+                    .stream().map(TransactionLineItemsEntity::getProductName)
+                    .distinct()
+                    .toList();
         }
         else{
             informationParts=new ArrayList<>();
@@ -272,7 +274,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .account(accountInformation)
                 .transactions(informationParts)
                 .categoryInformationList(categoryInformationList)
-                .listOfProducts(null)
+                .listOfProducts(listOfProducts)
                 .build();
 
 

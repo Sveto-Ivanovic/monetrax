@@ -79,7 +79,7 @@ public class UserServiceImpl implements UserService {
                 && userUpdate.getName() == null
                 && userUpdate.getSurname() == null
                 && userUpdate.getUserName() == null
-                && userUpdate.getUserEmail() == null) {
+                ) {
             log.warn("User update rejected, no fields provided [userId={}]", userId);
             throw new NoFieldToUpdateUserExistsException("Nothing to update user with.");
         }
@@ -94,13 +94,6 @@ public class UserServiceImpl implements UserService {
         Optional.ofNullable(userUpdate.getSurname()).ifPresent(user::setSurname);
         Optional.ofNullable(userUpdate.getUserName()).ifPresent(user::setUserName);
         user.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
-
-        if(userUpdate.getUserEmail() != null && userRepository.existsUserEmail(userUpdate.getUserEmail())) {
-            log.warn("User update rejected, email already exists [userId={}]", userId);
-            throw new EmailAlreadyExistsException("Cannot update user with present email as the email already exists.");
-        }
-
-        Optional.ofNullable(userUpdate.getUserEmail()).ifPresent(user::setUserEmail);
 
         UserEntity  userEntity = userRepository.save(user);
         log.info("User updated [userId={}]", userId);

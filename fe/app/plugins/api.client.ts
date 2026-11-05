@@ -6,6 +6,13 @@ export default defineNuxtPlugin((nuxtApp) => {
   const userStore = useUserStore()
   const baseURL = config.public.baseUrl as string
 
+  const PUBLIC_ENDPOINTS = [
+  '/auth/login',
+  '/user/create',
+  '/auth/token/logout',
+  '/auth/health-check',
+]
+
   let refreshPromise: Promise<string | null> | null = null;
 
   function refreshToken(): Promise<string | null> {
@@ -47,7 +54,11 @@ export default defineNuxtPlugin((nuxtApp) => {
     retryStatusCodes: [401],
     retry: 1,
 
-    async onRequest({ options }) {
+    async onRequest({ options, request }) {
+
+      if(PUBLIC_ENDPOINTS.includes(request.pathname)){
+        return
+      }
 
       if (refreshPromise) {
         const token = await refreshPromise
@@ -75,8 +86,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     async onResponseError({ response, options, request }) {
       if (response.status !== 401) return
 
+      console.log("Retry attempt (401): ", options.retry)
       if (!options.retry) return
-
+      
 
 
       const oldToken = options.headers.get('Authorization')

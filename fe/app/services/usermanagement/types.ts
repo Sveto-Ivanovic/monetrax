@@ -16,6 +16,15 @@ export interface UserInformation {
   additionalInfo: string;
 }
 
+export interface UserRegistration {
+  userEmail: string;
+  userName: string;
+  name: string;
+  surname: string;
+  dateOfBirth: string; // ISO format: YYYY-MM-DD
+  password: string;
+}
+
 export interface UserInformationDetailed {
     userInfo: UserInformation;
     aiApiKeys: string[];
@@ -30,4 +39,32 @@ export interface Error{
     message: string;
     clue: string;
     
+}
+
+
+export interface LogInRequest{
+    email: string;
+    password: string;
+}
+
+export interface UserInformationDetailed{
+    userInfo: UserInformation;
+    aiApiKeys: string[];
+}
+
+export interface UserUpdate {
+  userName?: string;
+  name?: string;
+  surname?: string;
+  dateOfBirth?: string;
+}
+
+export interface UpdatePassword {
+    oldPassword: string;
+    newPassword: string;
+}
+
+export interface PasswordUpdateResponse {
+  successfulPasswordUpdate: boolean;
+  message: string;
 }
