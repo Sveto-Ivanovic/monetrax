@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.user.service;
 
+import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
 import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
@@ -21,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,6 +41,9 @@ public class UserServiceImplTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private ApiKeysRepository apiKeysRepository;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -95,11 +100,12 @@ public class UserServiceImplTest {
     public void fetchUserByIdSuccessTest(){
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
         when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
+        when(apiKeysRepository.fetchPresentKeys(userEntityTest.getUserId())).thenReturn(new ArrayList<>());
 
-        UserInformation resUser = userService.fetchUserById(userEntityTest.getUserId());
+        UserInformationDetailed resUser = userService.fetchUserById(userEntityTest.getUserId());
 
         assertNotNull(resUser);
-        assertEquals(userInformationTest, resUser);
+        assertEquals(userInformationTest, resUser.getUserInfo());
         verify(userRepository).findById(userEntityTest.getUserId());
         verify(userMapper).toUserInformation(userEntityTest);
     }
@@ -144,7 +150,6 @@ public class UserServiceImplTest {
     @Test
     public void updateUserSuccessTest(){
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
                 .userName("updateduser")
                 .name("Updated")
                 .surname("Person")
@@ -154,7 +159,7 @@ public class UserServiceImplTest {
 
         UserEntity updatedUserEntity = UserEntity.builder()
                 .userId(userEntityTest.getUserId())
-                .userEmail(userUpdate.getUserEmail())
+                .userEmail(userEntityTest.getUserEmail())
                 .userName(userUpdate.getUserName())
                 .name(userUpdate.getName())
                 .surname(userUpdate.getSurname())
@@ -169,7 +174,6 @@ public class UserServiceImplTest {
                 .additionalInfo(userEntityTest.getAdditionalInfo())
                 .build();
 
-        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(false);
         when(userMapper.toUserInformation(any(UserEntity.class))).thenReturn(userInformationTest);
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
         when(userRepository.save(any(UserEntity.class))).thenReturn(updatedUserEntity);
@@ -179,34 +183,15 @@ public class UserServiceImplTest {
         assertNotNull(res);
         assertEquals(userInformationTest, res);
 
-        verify(userRepository).existsUserEmail(userEntityTest.getUserEmail());
         verify(userRepository).findById(userEntityTest.getUserId());
         verify(userRepository).save(any(UserEntity.class));
     }
 
 
-    @Test
-    public void updateUserEmailAlreadyExistsFailureTest() {
-        UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
-                .userName("updateduser")
-                .name("Updated")
-                .surname("Person")
-                .dateOfBirth(LocalDate.of(1992, 5, 15))
-                .build();
-
-        when(userRepository.existsUserEmail(userUpdate.getUserEmail())).thenReturn(true);
-        when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
-
-        assertThrows(EmailAlreadyExistsException.class, ()->{
-            userService.updateUser(userUpdate, userEntityTest.getUserId());
-        });
-    }
 
     @Test
     public void updateUserThatUserDoesNotExistFailureTest() {
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("updated.user@example.com")
                 .userName("updateduser")
                 .name("Updated")
                 .surname("Person")
