@@ -44,7 +44,7 @@
       </div>
 
       <div class="flex justify-center">
-        <UButton type="submit" class="submit-button">
+        <UButton type="submit" class="submit-button" :loading="is_loading" :disabled="is_loading">
           Submit
         </UButton>
       </div>
@@ -90,11 +90,26 @@ function redirectHome() {
   navigateTo('/')
 }
 
+const api = apiRouter.userApi()
+const loginUserMutation = api.loginUser()
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   is_loading.value = true
   console.log(event.data)
-  /* small delay to simulate a network request */
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  const loginData: LogInRequest = {
+        email: event.data.email,
+        password: event.data.password
+  }
+
+ try {
+        const response = await loginUserMutation.mutateAsync(loginData)
+        console.log('Login successful:', response)
+        navigateTo('/dashboard')
+    } catch (error) {
+        console.error('Registration failed:', error)
+    } finally {
+        is_loading.value = false
+    }
   is_loading.value = false
 }
 

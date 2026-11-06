@@ -194,6 +194,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     try {
         const response = await registerUserMutation.mutateAsync(registrationData)
         console.log('Registration successful:', response)
+        navigateTo('/login')
     } catch (error) {
         console.error('Registration failed:', error)
     } finally {

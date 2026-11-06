@@ -86,12 +86,44 @@ export function userManagementApi() {
         return { ...query };
     }
 
+    function logOutUser() {
+        const userStore = useUserStore();
+
+        return useMutation({
+            mutationKey: ['logout'],
+            mutationFn: () => api.logout(),
+            onSuccess: (data) => {
+                userStore.logOutUser()
+            }
+        })
+    }
+
+
+    function updateUser() {
+        return useMutation({
+            mutationKey: ['update-user-info'],
+            mutationFn: (req: UserUpdate) => api.updateUser(req),
+        })
+    }
+
+
+
+    function updateUserPassword() {
+        return useMutation({
+            mutationKey: ['update-password'],
+            mutationFn: (req: UpdatePassword) => api.updatePassword(req),
+        })
+    }
 
 
     return {
         api,
         loginUser,
         registerUser,
-        fetchUserInfo
+        fetchUserInfo,
+        logOutUser,
+        updateUser,
+        updateUserPassword
+
     }
 }
