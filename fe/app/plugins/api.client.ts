@@ -1,3 +1,4 @@
+import { th } from '@nuxt/ui/runtime/locale/index.js';
 import { useUserStore } from '../store/user'
 import type { CommonErrorResponse, LogInResponse } from "~/services/usermanagement/types";
 
@@ -83,11 +84,20 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
 
     },
-    onResponse({ response }) {
+    onResponse({ response, request }) {
 
     },
-    async onResponseError({ response, options, request }) {
+    async onResponseError({ response, options, request, error }) {
+
       if (response.status !== 401) return
+
+      console.log("Request structure: "+ request as string)
+      const extractedRouteFromUrl = request.toString().replace(options.baseURL as string, '') 
+      if (PUBLIC_ENDPOINTS.includes(extractedRouteFromUrl as string)) {
+        console.log("Public endpoint, skipping auth check.")
+        options.retry = 0
+        return
+      }
 
       console.log("Retry attempt (401): ", options.retry)
       if (!options.retry) return

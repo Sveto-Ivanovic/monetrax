@@ -19,6 +19,10 @@
                 <p>Sign Up to get started!</p>
             </div>
 
+            <div v-if="errorMessage" class="error-message">
+                {{ errorMessage }}
+            </div>
+
 
             <UFormField label="Username" name="username">
                 <UInput v-model="state.username" placeholder="Enter your username" />
@@ -34,26 +38,26 @@
 
             <UFormField label="Date of birth" name="dateOfBirth">
 
-            <UInputDate ref="inputDate" v-model="state.dateOfBirth">
-                <template #trailing>
-                    <UPopover :reference="inputDate?.inputsRef[3]?.$el">
-                        <UButton color="neutral" variant="link" size="sm" icon="i-lucide-calendar"
-                            aria-label="Select a date" class="px-0" />
+                <UInputDate ref="inputDate" v-model="state.dateOfBirth">
+                    <template #trailing>
+                        <UPopover :reference="inputDate?.inputsRef[3]?.$el">
+                            <UButton color="neutral" variant="link" size="sm" icon="i-lucide-calendar"
+                                aria-label="Select a date" class="px-0" />
 
-                        <template #content>
-                            <UCalendar v-model="state.dateOfBirth" class="p-2" />
-                        </template>
-                    </UPopover>
-                </template>
-            </UInputDate>
-            </UFormField>   
+                            <template #content>
+                                <UCalendar v-model="state.dateOfBirth" class="p-2" />
+                            </template>
+                        </UPopover>
+                    </template>
+                </UInputDate>
+            </UFormField>
 
             <UFormField label="Email" name="email">
                 <UInput v-model="state.email" placeholder="example@gmail.com" />
             </UFormField>
 
             <UFormField label="Password" name="password">
-                <UInput v-model="state.password" placeholder="••••••••" :type="show ? 'text' : 'password'"
+                <UInput v-model="state.password"  :type="show ? 'text' : 'password'"
                     :ui="{ trailing: 'pe-1' }">
                     <template #trailing>
                         <UButton color="neutral" variant="link" size="sm"
@@ -66,7 +70,7 @@
 
 
             <UFormField label="Confirm Password" name="confirmPassword">
-                <UInput v-model="state.confirmPassword" placeholder="••••••••" :type="showConfirm ? 'text' : 'password'"
+                <UInput v-model="state.confirmPassword"  :type="showConfirm ? 'text' : 'password'"
                     :ui="{ trailing: 'pe-1' }">
                     <template #trailing>
                         <UButton color="neutral" variant="link" size="sm"
@@ -89,7 +93,8 @@
             </div>
 
             <div class="flex justify-center">
-                <UButton type="submit" class="submit-button" :loading="is_loading" :disabled="!acceptTerms || is_loading">
+                <UButton type="submit" class="submit-button" :loading="is_loading"
+                    :disabled="!acceptTerms || is_loading">
                     Submit
                 </UButton>
             </div>
@@ -112,7 +117,8 @@ import * as v from 'valibot'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { CalendarDate, today } from '@internationalized/date'
 import { apiRouter } from '~/services/serviceWrapper'
-import type { UserRegistration } from '~/services/usermanagement/types'
+import type { CommonErrorResponse, UserRegistration } from '~/services/usermanagement/types'
+import { FetchError } from 'ofetch'
 
 
 const show = ref(false)
@@ -136,7 +142,7 @@ const schema = v.pipe(
                 (d) => d.compare(today("UTC")) <= 0,
                 'Date of birth cannot be in the future'
             )
-        ),        email: v.pipe(v.string(), v.email('Invalid email')),
+        ), email: v.pipe(v.string(), v.email('Invalid email')),
         password: v.pipe(v.string(),
             v.regex(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, 'Must contain uppercase, lowercase, number, and special character'),
             v.minLength(8, 'Must be at least 8 characters')
@@ -177,11 +183,12 @@ function redirectHome() {
 
 const api = apiRouter.userApi()
 const registerUserMutation = api.registerUser()
-
+let errorMessage = ref('')
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
     is_loading.value = true
     console.log(event.data)
+    errorMessage.value = ''
 
     const registrationData: UserRegistration = {
         userName: event.data.username,
@@ -197,10 +204,25 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         navigateTo('/login')
     } catch (error) {
         console.error('Registration failed:', error)
+        if (error instanceof FetchError) {
+            if (error.data && "errors" in error.data) {
+                const commonErrorResponse = error.data as CommonErrorResponse
+                console.log('Error details:', commonErrorResponse.errors)
+                errorMessage.value = commonErrorResponse.errors.map(err => err.message).join(', ')
+            }
+            else {
+                console.log('Error details:', error.data)
+                errorMessage.value = 'An unexpected error occurred.'
+            }
+        } else if (error instanceof Error) {
+            console.log(`Login failed: ${error.message}`)
+            errorMessage.value = error.message
+            console.log(error)
+        }
     } finally {
         is_loading.value = false
     }
-    
+
 
     is_loading.value = false
 }
@@ -337,5 +359,17 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     justify-content: center;
     align-items: center;
     text-align: center;
+}
+
+.error-message {
+    color: red;
+    font-size: 18px;
+    margin-bottom: 16px;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid red;
+    padding: 8px;
+    border-radius: 8px;
+    background: #ffe5e5;
 }
 </style>

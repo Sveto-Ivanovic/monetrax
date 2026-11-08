@@ -16,6 +16,16 @@ export const useUserStore = defineStore("userStore", () => {
   const hasUserInfo = ref(false)
   const hasApiKey = ref(false)
 
+  const selectedTimeZone = ref("UTC")
+
+  function setSelectedTimeZone(timeZone: string) {
+    selectedTimeZone.value = timeZone
+  }
+
+  function getSelectedTimeZone() {
+    return selectedTimeZone.value
+  }
+
   function initUser(data: LogInResponse) {
     user.value = data;
   }
@@ -71,6 +81,9 @@ export const useUserStore = defineStore("userStore", () => {
     setUserInfo,
     removeUserInfo,
     logOutUser,
+    selectedTimeZone,
+    setSelectedTimeZone,
+    getSelectedTimeZone
   };
 }, {
   persist: true,
