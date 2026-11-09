@@ -48,7 +48,7 @@
         <div class="card-footer">
           <div class="graph-wrapper">
             <VisXYContainer :data="incomeChartData" :height="25">
-              <VisLine :x="(d: ChartPoint) => d.x" :y="(d: ChartPoint) => d.y" :lineWidth="3" :color="'green'"/>
+              <VisLine :x="(d: ChartPoint) => d.x" :y="(d: ChartPoint) => d.y" :lineWidth="3" :color="'green'" />
             </VisXYContainer>
           </div>
         </div>
@@ -82,101 +82,78 @@
       </div>
 
 
+
+    </div>
+
+
     <div class="flow-and-account-state-wrapper">
 
-        <div class="income-expense-flow">
+      <div class="income-expense-flow">
 
-            <div class="ief-header">
+        <div class="ief-header">
 
-              <span class="s-1">Cash flow</span>
-              <span class="s-2">Income and spending across all accounts</span>
-            </div>
-            
-            <div class="ief-container">
-              <BarChart :height="350" :y-axis="['expense', 'income']" v-bind="options">
-                <template #tooltip="{ values }">
-                  <div class="ief-hover">
-                    <div class="ief-hover-title">{{ values?.date }}</div>
-
-                    <div class="ief-hover-row">
-                      <span  class="ief-hover-dot"  :style="{ '--c': RevenueCategoriesMultiple.income.color }"/>
-                      <span class="ief-hover-label">Income</span>
-                      <span class="ief-hover-value ief-hover-value-income">
-                        {{ formatCurrency(values?.income ?? 0, fetchedTemplateTest.staticDataTotalBalance[0].currency ?? 'EUR') }}
-                      </span>
-                    </div>
-
-                    <div class="ief-hover-row">
-                      <span class="ief-hover-dot"  :style="{ '--c': RevenueCategoriesMultiple.expense.color }" />
-                      <span class="ief-hover-label">Expense</span>
-                      <span class="ief-hover-value ief-hover-value-expense">
-                        {{ formatCurrency(values?.expense ?? 0,  fetchedTemplateTest.staticDataTotalBalance[0].currency ?? 'EUR') }}
-                      </span>
-                    </div>
-                  </div>
-                </template>
-              </BarChart>
-            </div>
-
+          <span class="s-1">Cash flow</span>
+          <span class="s-2">Income and spending across all accounts</span>
         </div>
 
-        <div class="account-state">
+        <div class="ief-container" ref="chartEl">
+          <ClientOnly>
+            <VChart :option="chartOption" autoresize style="height: 350px; width: 100%" />
+          </ClientOnly>
+        </div>
 
-            <div class="as-header">
-              
-              <div class="as-left">
-                  <span class="s-1">Your accounts</span>
-                  <span class="s-2">Balances at a glance</span>
-              </div>
+      </div>
 
-               <NuxtLink to="/accounts" class="view-all-accs">View all →</NuxtLink>
-            </div>
+      <div class="account-state">
 
-            <div class="as-content">
+        <div class="as-header">
 
-                <template v-if="displayTop3Accs.length">
-
-                  <div
-                    v-for="(item, i) in displayTop3Accs"
-                    :key="item.bankNumLast4"
-                    class="account-container"
-                  >
-
-                    <div class="acc-icon" :class="`acc-icon-${i % 3}`">
-                      {{ item.accountName.charAt(0) }}
-                    </div>
-
-                    <div class="acc-info">
-                      <div class="acc-name">{{ item.accountName }}</div>
-                      <div class="acc-sub">{{ item.institution }} · {{ item.bankNumLast4 }}</div>
-                    </div>
-
-                    <div class="acc-amount">
-                      <div class="acc-balance">
-                        {{ formatMoney(item.totalBalance, item.currency) }}
-                      </div>
-                      <div class="acc-type">{{ item.accountType ?? item.currency }}</div>
-                    </div>
-
-                  </div>
-
-                </template>
-
-                <div v-else class="no-account-data">No accounts yet</div>
+          <div class="as-left">
+            <span class="s-1">Your accounts</span>
+            <span class="s-2">Balances at a glance</span>
           </div>
 
-              
-            <div class="as-footer" style="width: 100%;">
-              <NuxtLink to="/accounts/createAcc" class="view-all-accs">+ Add an account</NuxtLink>
-            </div>
-
+          <NuxtLink to="/accounts" class="view-all-accs">View all →</NuxtLink>
         </div>
 
+        <div class="as-content">
+
+          <template v-if="displayTop3Accs.length">
+
+            <NuxtLink v-for="(item, i) in displayTop3Accs" :key="item.bankNumLast4" class="account-container"
+              :to="`/accounts/${item.id}`">
+
+              <div class="acc-icon" :class="`acc-icon-${i % 3}`">
+                {{ item.accountName.charAt(0) }}
+              </div>
+
+              <div class="acc-info">
+                <div class="acc-name">{{ item.accountName }}</div>
+                <div class="acc-sub">{{ item.institution }} · {{ item.bankNumLast4 }}</div>
+              </div>
+
+              <div class="acc-amount">
+                <div class="acc-balance">
+                  {{ formatCurrency(item.totalBalance, item.currency) }}
+                </div>
+                <div class="acc-type">{{ item.currency }}</div>
+              </div>
+
+            </NuxtLink>
+
+          </template>
+
+          <div v-else class="no-account-data">No accounts yet</div>
+        </div>
+
+
+        <div class="as-footer" style="width: 100%; padding-top: 32px;">
+          <NuxtLink to="/accounts/createAcc" class="view-all-accs">+ Add an account</NuxtLink>
+        </div>
+
+      </div>
+
     </div>
-
-
-    </div>
-
 
 
 
@@ -191,6 +168,7 @@ import { useUserStore } from '~/store/user';
 import { utcToZoned } from '~/utilis/timezoneUtilis/convertTimezone';
 import { formatCurrency } from '~/utilis/formaters/balanceFormater'
 import { VisXYContainer, VisLine } from '@unovis/vue'
+import { useElementSize } from '@vueuse/core'
 
 const userStore = useUserStore()
 console.log(userStore.userInfo)
@@ -222,6 +200,11 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     totalExpenses: 1800,
     currency: 'EUR',
     month: '2026-09'
+  }
+    , {
+    totalExpenses: 1800,
+    currency: 'EUR',
+    month: '2026-08'
   }],
   staticDataTotalIncome: [{
     totalIncome: 3000,
@@ -235,25 +218,32 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     totalIncome: 2800,
     currency: 'EUR',
     month: '2026-09'
+  }, {
+    totalIncome: 2800,
+    currency: 'EUR',
+    month: '2026-08'
   }],
   totalBalanceByAccount: [{
     accountName: 'Checking Account',
     bankNumLast4: '1234',
     totalBalance: 5000,
     currency: 'EUR',
-    institution: 'Bank A'
+    institution: 'Bank A',
+    id: "550e8400-e29b-41d4-a716-446655440000"
   }, {
     accountName: 'Savings Account',
     bankNumLast4: '5678',
     totalBalance: 3000,
     currency: 'EUR',
-    institution: 'Bank B'
+    institution: 'Bank B',
+    id: "7f3a9c21-8b64-4d02-ae51-93c7f0b82614"
   }, {
     accountName: 'Investment Account',
     bankNumLast4: '9012',
     totalBalance: 2000,
     currency: 'EUR',
-    institution: 'Bank C'
+    institution: 'Bank C',
+    id: "c2d8e5a7-1f43-49b6-8c90-5a2e71d4f603"
   }],
   latestFiveTransactions: [{
     transactionName: 'Grocery Store',
@@ -361,6 +351,8 @@ const getBalance = computed<{
         ((currentMonth.totalBalance - previousMonth.totalBalance) /
           previousMonth.totalBalance) * 100;
 
+      const changeString = Math.abs(change).toFixed(2)
+
       if (change > 0) {
         changeComparedToLastMonth = "+ " + changeString + "%"
         sign = "positive"
@@ -371,7 +363,6 @@ const getBalance = computed<{
       }
     }
 
-    const changeString = Math.abs(change).toFixed(2)
     const ascending = [...tempArray].reverse()
 
     yData = ascending.map(x => x.totalBalance)
@@ -519,6 +510,7 @@ const getExpenses = computed<{
   }
 })
 
+/* the multi barchart part */
 
 
 type DataProps = {
@@ -533,6 +525,7 @@ const RevenueCategoriesMultiple = {
 };
 
 const RevenueData = computed<DataProps[]>(() => {
+
   return getIncome.value.xData
     .map((date, i) => ({
       date: date.toISOString().slice(0, 7),
@@ -542,19 +535,53 @@ const RevenueData = computed<DataProps[]>(() => {
     .slice(-7)
 })
 
-const options = computed(() => ({
-  data: RevenueData.value,
-  categories: RevenueCategoriesMultiple,
-  xNumTicks:  Math.min(7, RevenueData.value.length),
-  xAxis: "date" as keyof DataProps,
-  groupPadding: 70,
-  barPadding: 0.25,   
-  radius: 5,
-  xFormatter: (tick: number, i?: number) =>
-    RevenueData.value[i ?? tick]?.date ?? "",
-  yFormatter: (tick: number) =>
-    formatCurrency(tick,  fetchedTemplateTest.staticDataTotalBalance[0].currency ?? 'EUR'),
-  }))
+const currency = computed(() => fetchedTemplateTest.staticDataTotalBalance[0]?.currency ?? 'EUR')
+
+const chartOption = computed(() => ({
+  grid: { left: 10, right: 10, top: 20, bottom: 40, containLabel: true },
+  legend: { bottom: 0, icon: 'roundRect', itemWidth: 10, itemHeight: 10 },
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' },
+    backgroundColor: 'rgb(222, 240, 245)',
+    borderWidth: 0,
+
+    formatter: (params: any[]) => `
+      <div style="min-width:160px">
+        <div style="font-size:12px;font-weight:600;opacity:.6;margin-bottom:8px">${params[0].axisValue}</div>
+        ${params.map(p => `
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            ${p.marker}
+            <span style="flex:1;font-size:13px;opacity:.7">${p.seriesName}</span>
+            <span style="font-size:14px;font-weight:600;color:${p.color}">${formatCurrency(p.value, currency.value)}</span>
+          </div>`).join('')}
+      </div>`,
+      
+  },
+  xAxis: {
+    type: 'category',
+    data: RevenueData.value.map(d => d.date),
+    axisTick: { show: false },
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { formatter: (v: number) => formatCurrency(v, currency.value) },
+  },
+  series: [
+    {
+      name: 'Income', type: 'bar', barWidth: 20, barGap: '0%',
+      data: RevenueData.value.map(d => d.income),
+      itemStyle: { color: RevenueCategoriesMultiple.income.color, borderRadius: [5, 5, 0, 0] },
+    },
+    {
+      name: 'Expense', type: 'bar', barWidth: 20,
+      data: RevenueData.value.map(d => d.expense),
+      itemStyle: { color: RevenueCategoriesMultiple.expense.color, borderRadius: [5, 5, 0, 0] },
+    },
+  ],
+}))
+
+/* accounts */
 
 type Account = {
   accountName: string
@@ -562,14 +589,21 @@ type Account = {
   totalBalance: number
   currency: string
   institution: string
-  accountType?: string   // optional: 'Checking' | 'Savings' | 'Cash'
+  id: string
 }
 
-const displayTop3Accs = computed<Account[]>(() =>
-  [...staticDataTotalBalance.totalBalanceByAccount]
+const displayTop3Accs = computed<Account[]>(() => {
+  if (!fetchedTemplateTest.totalBalanceByAccount.length) {
+    return []
+
+  }
+
+  const x = [...fetchedTemplateTest.totalBalanceByAccount]
     .sort((a, b) => b.totalBalance - a.totalBalance)
     .slice(0, 3)
-)
+
+  return x
+})
 
 definePageMeta({
   middleware: ['require-user-info'],
@@ -579,6 +613,12 @@ definePageMeta({
 </script>
 
 <style scoped>
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
 .main-cards {
   display: flex;
   flex-direction: row;
@@ -603,7 +643,9 @@ definePageMeta({
     0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-.card-header1, .card-header2, .card-header3{
+.card-header1,
+.card-header2,
+.card-header3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -733,13 +775,22 @@ definePageMeta({
   padding-top: 24px;
 }
 
-.income-expense-flow{
+.flow-and-account-state-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+  flex-wrap: wrap;
+  justify-content: center;
+
+}
+
+.income-expense-flow {
   flex: 2;
   display: flex;
   align-items: center;
   flex-direction: column;
-  min-height:400px;
-    min-width: 450px;
+  min-height: 400px;
+  min-width: 450px;
 
   padding: 24px;
   background-color: rgb(255, 255, 255);
@@ -758,6 +809,8 @@ definePageMeta({
   padding: 10px 14px;
   min-width: 160px;
   font-family: inherit;
+  background-color: rgb(222, 240, 245);
+  border-radius: 16px;
 }
 
 .ief-hover-title {
@@ -775,7 +828,7 @@ definePageMeta({
   gap: 8px;
 }
 
-.ief-hover-row + .ief-hover-row {
+.ief-hover-row+.ief-hover-row {
   margin-top: 4px;
 }
 
@@ -805,26 +858,26 @@ definePageMeta({
   color: #c52222;
 }
 
-.ief-header{
+.ief-header {
   display: flex;
   flex-direction: column;
 }
 
 .s-1 {
-    margin: 0 0 5px;
-    color: #30473e;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: -.2px;
+  margin: 0 0 5px;
+  color: #30473e;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.2px;
 }
 
 .s-2 {
-    margin: 0;
-    color: #8c9992;
-    font-size: 9px;
+  margin: 0;
+  color: #8c9992;
+  font-size: 13px;
 }
 
-.account-state{
+.account-state {
   flex: 1;
   display: flex;
   align-items: center;
@@ -844,38 +897,44 @@ definePageMeta({
     0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-.view-all-accs{
-      color: #0c0075;
-    font-size: 9px;
-    font-weight: 700;
-    white-space: nowrap;
+.view-all-accs {
+  color: #0c0075;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .view-all-accs:hover {
   color: #1e0bca;
 }
 
-.as-left{
-    display: flex;
+.as-left {
+  display: flex;
   flex-direction: column;
 }
 
-.as-header{
+.as-header {
   display: flex;
   flex-direction: row;
-  align-items:center;
+  align-items: center;
   justify-content: space-between;
+  width: 100%;
 }
 
 .account-container {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 0;
+  border-radius: 8px;
+  padding: 16px 8px;
 }
 
-.account-container + .account-container {
+.account-container+.account-container {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.account-container:hover {
+  box-shadow: 0 0 0 1px blue;
 }
 
 .acc-icon {
@@ -889,9 +948,20 @@ definePageMeta({
   flex-shrink: 0;
 }
 
-.acc-icon-0 { background: #e6f4ee; color: #2f8f6b; }
-.acc-icon-1 { background: #eeeaf6; color: #7a6aa8; }
-.acc-icon-2 { background: #fbefe0; color: #c9822b; }
+.acc-icon-0 {
+  background: #e6f4ee;
+  color: #2f8f6b;
+}
+
+.acc-icon-1 {
+  background: #eeeaf6;
+  color: #7a6aa8;
+}
+
+.acc-icon-2 {
+  background: #fbefe0;
+  color: #c9822b;
+}
 
 .acc-info {
   flex: 1;
@@ -928,5 +998,14 @@ definePageMeta({
   padding: 24px 0;
   text-align: center;
   opacity: 0.5;
+}
+
+.as-content {
+  width: 100%;
+  padding-top: 32px;
+}
+
+.ief-container {
+  width: 100%;
 }
 </style>

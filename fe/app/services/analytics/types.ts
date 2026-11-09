@@ -29,6 +29,7 @@ export interface AccountBalance {
     bankNumLast4: string;
     totalBalance: number;
     currency: string;
+    id: string;
     institution: string;
 }
 

@@ -92,7 +92,7 @@ const selectedTimeZone = computed({
 </script>
 
 <template>
-    <div class="flex flex-1 ">
+    <div class="flex flex-1" style="justify-content: center;">
 
         <USidebar v-model:open="open" collapsible="icon" rail :ui="{
             container: 'h-full border-r border-white/10',
