@@ -1,6 +1,9 @@
 package com.monetrax.monetrax.transactions.repository;
 
 import com.monetrax.monetrax.analytics.dto.GroupByTypes;
+import com.monetrax.monetrax.analytics.dto.MonthlyBalance;
+import com.monetrax.monetrax.analytics.dto.MonthlyExpenses;
+import com.monetrax.monetrax.analytics.dto.MonthlyIncome;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
@@ -31,4 +34,17 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     @Query("select t from TransactionEntity t join fetch t.user join fetch t.account where t.transactionId in ?1")
     public List<TransactionEntity> fetchTransactionsForScheduler(List<UUID> transactionIds);
+
+    @Query("""
+    select sum(t.amount) as amount,
+           'EUR' as currency,
+           format(t.createdAt as 'yyyy-MM') as month
+    from TransactionEntity t
+    where t.account.accountId = ?1
+      and t.createdAt >= ?2
+      and t.categoryType in ?3
+    group by format(t.createdAt as 'yyyy-MM')
+    order by format(t.createdAt as 'yyyy-MM') asc
+    """)
+    List<MonthlyBalance> findMonthlyAmountsByMonth(UUID id, OffsetDateTime from, List<CategoryKind> categoryKindList);
 }

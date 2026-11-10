@@ -3,9 +3,7 @@ package com.monetrax.monetrax.analytics.service.impl;
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
-import com.monetrax.monetrax.analytics.dto.AnalyticsRequest;
-import com.monetrax.monetrax.analytics.dto.AnalyticsResponse;
-import com.monetrax.monetrax.analytics.dto.GroupByTypes;
+import com.monetrax.monetrax.analytics.dto.*;
 import com.monetrax.monetrax.analytics.service.AnalyticsService;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
@@ -44,6 +42,100 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         this.transactionRepository = transactionRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
+    }
+
+    private List<MonthlyIncome> fillMissingMonthsIncome(List<MonthlyBalance> rows,
+                                                  YearMonth start,
+                                                  YearMonth end) {
+
+        Map<YearMonth, MonthlyIncome> yearMonthMonthlyIncomeMap = rows.stream()
+                .collect(Collectors.toMap(x-> {
+                    String stringYM = x.getMonth();
+                    int year = Integer.parseInt(stringYM.substring(0, 4));
+                    int month = Integer.parseInt(stringYM.substring(5));
+                    return YearMonth.of(year, month);
+
+                }, x-> MonthlyIncome.builder().totalIncome(x.getAmount()).month(x.getMonth()).currency(x.getCurrency()).build() ));
+
+        List<MonthlyIncome> rowsToReturn = new ArrayList<>();
+        for(YearMonth startMonth = start; !startMonth.isAfter(end); startMonth=startMonth.plusMonths(1)){
+            rowsToReturn.add(yearMonthMonthlyIncomeMap.getOrDefault(startMonth, MonthlyIncome.builder().currency("EUR")
+                    .month(startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")))
+                    .totalIncome(BigDecimal.ZERO).build()));
+        }
+
+        Collections.reverse(rowsToReturn);
+        return rowsToReturn;
+    }
+
+
+    private List<MonthlyExpenses> fillMissingMonthsExpense(List<MonthlyBalance> rows,
+                                                        YearMonth start,
+                                                        YearMonth end) {
+
+        Map<YearMonth, MonthlyExpenses> yearMonthMonthlyExpensesMap = rows.stream()
+                .collect(Collectors.toMap(x-> {
+                    String stringYM = x.getMonth();
+                    int year = Integer.parseInt(stringYM.substring(0, 4));
+                    int month = Integer.parseInt(stringYM.substring(5));
+                    return YearMonth.of(year, month);
+
+                }, x-> MonthlyExpenses.builder().totalExpenses(x.getAmount()).currency(x.getCurrency()).month(x.getMonth()).build() ));
+
+        List<MonthlyExpenses> rowsToReturn = new ArrayList<>();
+        for(YearMonth startMonth = start; !startMonth.isAfter(end); startMonth=startMonth.plusMonths(1)){
+            rowsToReturn.add(yearMonthMonthlyExpensesMap.getOrDefault(startMonth, MonthlyExpenses.builder().currency("EUR")
+                    .month(startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")))
+                    .totalExpenses(BigDecimal.ZERO).build()));
+        }
+        Collections.reverse(rowsToReturn);
+        return rowsToReturn;
+    }
+
+
+    private List<TotalBalanceMonthly> fillTotalBalanceBasedOnCurrentState(BigDecimal currentBalance,
+                                                                          List<MonthlyIncome> rowsIncome,
+                                                                          List<MonthlyExpenses> rowsExpenses,
+                                                                          YearMonth start,
+                                                                          YearMonth end
+                                                                          ){
+        // this function expects that the two lists are of the same length and that the two lists posses same months and in the order latest-> oldest
+        // won't do checks here
+
+
+
+        Map<YearMonth, MonthlyExpenses> yearMonthMonthlyExpensesMap = rowsExpenses.stream()
+                .collect(Collectors.toMap(x-> {
+                    String stringYM = x.getMonth();
+                    int year = Integer.parseInt(stringYM.substring(0, 4));
+                    int month = Integer.parseInt(stringYM.substring(5));
+                    return YearMonth.of(year, month);
+
+                }, x->x ));
+
+        Map<YearMonth, MonthlyIncome> yearMonthMonthlyIncomeMap = rowsIncome.stream()
+                .collect(Collectors.toMap(x-> {
+                    String stringYM = x.getMonth();
+                    int year = Integer.parseInt(stringYM.substring(0, 4));
+                    int month = Integer.parseInt(stringYM.substring(5));
+                    return YearMonth.of(year, month);
+
+                }, x->x ));
+
+        List<TotalBalanceMonthly> rowsToReturn = new ArrayList<>();
+        BigDecimal stateVal = BigDecimal.ZERO.add(currentBalance);
+        for(YearMonth endMonth = end; !endMonth.isBefore(start); endMonth=endMonth.minusMonths(1)){
+            BigDecimal income = yearMonthMonthlyIncomeMap.containsKey(endMonth.plusMonths(1)) ? yearMonthMonthlyIncomeMap.get(endMonth.plusMonths(1)).getTotalIncome(): BigDecimal.ZERO;
+            BigDecimal expense = yearMonthMonthlyExpensesMap.containsKey(endMonth.plusMonths(1)) ? yearMonthMonthlyExpensesMap.get(endMonth.plusMonths(1)).getTotalExpenses(): BigDecimal.ZERO;
+            stateVal = stateVal.add(expense).subtract(income);
+
+            rowsToReturn
+                    .add(TotalBalanceMonthly.builder().currency("EUR")
+                    .month(endMonth.format(DateTimeFormatter.ofPattern("yyyy-MM")))
+                            .totalBalance(stateVal).build());
+        }
+
+        return rowsToReturn;
     }
 
 
@@ -242,6 +334,129 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         return AnalyticsResponse.builder().listOfTransactionsByCategoryKindAggregated(perAccount).build();
     }
 
+    @Override
+    public DashboardAnalyticsResponse getDashboardAnalytics( UUID userId) {
+
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("No user found with id={}", userId);
+            return new NoSuchUserExistsException("No user with id: " + userId);
+        });
+
+        // get all user accounts
+        List<AccountEntity> accountEntityList = accountRepository.getAllAccounts(userId);
+        if(accountEntityList.isEmpty()){
+            return DashboardAnalyticsResponse.builder()
+                    .totalBalanceMonthlyList(List.of())
+                    .monthlyExpenses(List.of())
+                    .monthlyIncomes(List.of())
+                    .accountBalances(List.of())
+                    .latestTransactions(List.of())
+                    .categoryAmountsIncome(List.of())
+                    .categoryAmountsExpense(List.of())
+                    .build();
+        }
+
+
+        List<List<TotalBalanceMonthly>> totalBalanceMonthliesPerAcc = new ArrayList<>();
+        List<List<MonthlyExpenses>> monthlyExpensesPerAcc = new ArrayList<>();
+        List<List<MonthlyIncome>> monthlyIncomesPerAcc = new ArrayList<>();
+
+
+        List<AccountBalance> accountBalances = new ArrayList<>();
+        List<LatestTransactions> latestTransactions = new ArrayList<>();
+
+        Map<String, BigDecimal> balanceByMonth = new LinkedHashMap<>();
+        Map<String, BigDecimal> incomeByMonth  = new LinkedHashMap<>();
+        Map<String, BigDecimal> expenseByMonth = new LinkedHashMap<>();
+
+        // inside the for loop we first decide current date then date - 3 years meaning with the current one 4 years worth of data
+        // then we extract the income related and expense related transactions and group them by months
+        // then we padd the missing dates with 0s
+        // balance is calculated => balance = (balance + 1 month) - (income + 1 month) + (expense + 1 month)
+        for(AccountEntity account : accountEntityList){
+            Year currentYear = Year.now(ZoneOffset.UTC);
+            OffsetDateTime fromDate = OffsetDateTime.of(currentYear.getValue()-3, 1,1,0,0,0,0, ZoneOffset.UTC);
+            OffsetDateTime timeNow = OffsetDateTime.now(ZoneOffset.UTC);
+
+            YearMonth start = YearMonth.from(fromDate);
+            YearMonth end = YearMonth.from(timeNow);
+
+            List<MonthlyBalance> transactionEntityListIncome = transactionRepository.findMonthlyAmountsByMonth(account.getAccountId(),
+                   fromDate, List.of(CategoryKind.INCOME,CategoryKind.ADJUSTMENT_PLUS, CategoryKind.TRANSFER_FROM));
+
+            List<MonthlyBalance> transactionEntityListExpense = transactionRepository.findMonthlyAmountsByMonth(account.getAccountId(),
+                    fromDate, List.of(CategoryKind.EXPENSE,CategoryKind.ADJUSTMENT_MINUS, CategoryKind.TRANSFER_TO));
+
+
+            List<MonthlyIncome> transactionEntityListIncomeCleaned = fillMissingMonthsIncome(transactionEntityListIncome, start, end);
+            List<MonthlyExpenses> transactionEntityListExpenseCleaned = fillMissingMonthsExpense(transactionEntityListExpense, start, end);
+
+            BigDecimal currentAccountBalance = account.getCurrentBalance();
+
+            List<TotalBalanceMonthly> totalBalanceByMonth = fillTotalBalanceBasedOnCurrentState(currentAccountBalance,
+                    transactionEntityListIncomeCleaned,
+                    transactionEntityListExpenseCleaned,
+                    start,
+                    end);
+
+            totalBalanceMonthliesPerAcc.add(totalBalanceByMonth);
+            monthlyExpensesPerAcc.add(transactionEntityListExpenseCleaned);
+            monthlyIncomesPerAcc.add(transactionEntityListIncomeCleaned);
+
+            accountBalances.add(AccountBalance.builder()
+                    .totalBalance(account.getCurrentBalance())
+                    .currency(account.getCurrency())
+                    .accountName(account.getName())
+                    .bankNumLast4(account.getAccountNumberMasked())
+                    .id(account.getAccountId())
+                    .institution(account.getInstitutionName())
+                    .build());
+
+            totalBalanceByMonth.forEach(x ->
+                    balanceByMonth.merge(x.getMonth(), x.getTotalBalance(), BigDecimal::add));
+            transactionEntityListIncomeCleaned.forEach(x ->
+                    incomeByMonth.merge(x.getMonth(), x.getTotalIncome(), BigDecimal::add));
+            transactionEntityListExpenseCleaned.forEach(x ->
+                    expenseByMonth.merge(x.getMonth(), x.getTotalExpenses(), BigDecimal::add));
+
+        }
+
+
+        List<TotalBalanceMonthly> profileBalance = balanceByMonth.entrySet().stream()
+                .map(e -> TotalBalanceMonthly.builder()
+                        .currency("EUR")
+                        .month(e.getKey())
+                        .totalBalance(e.getValue())
+                        .build())
+                .toList();
+
+        List<MonthlyIncome> profileIncome = incomeByMonth.entrySet().stream()
+                .map(e -> MonthlyIncome.builder()
+                        .currency("EUR")
+                        .month(e.getKey())
+                        .totalIncome(e.getValue())
+                        .build())
+                .toList();
+
+        List<MonthlyExpenses> profileExpenses = expenseByMonth.entrySet().stream()
+                .map(e -> MonthlyExpenses.builder()
+                        .currency("EUR")
+                        .month(e.getKey())
+                        .totalExpenses(e.getValue())
+                        .build())
+                .toList();
+
+
+
+
+
+
+
+
+
+
+        return null;
+    }
 
 
 }

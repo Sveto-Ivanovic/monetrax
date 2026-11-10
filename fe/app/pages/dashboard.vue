@@ -519,12 +519,12 @@ type DataProps = {
   date?: string;
 };
 
-const RevenueCategoriesMultiple = {
+const revenueCategoriesMultiple = {
   income: { name: "Income", color: "#40f728" },
   expense: { name: "Expense", color: "#c52222" },
 };
 
-const RevenueData = computed<DataProps[]>(() => {
+const revenueData = computed<DataProps[]>(() => {
 
   return getIncome.value.xData
     .map((date, i) => ({
@@ -548,19 +548,19 @@ const chartOption = computed(() => ({
 
     formatter: (params: any[]) => `
       <div style="min-width:160px">
-        <div style="font-size:12px;font-weight:600;opacity:.6;margin-bottom:8px">${params[0].axisValue}</div>
+        <div style="font-size:12px; font-weight:600; opacity:.6; margin-bottom:8px">${params[0].axisValue}</div>
         ${params.map(p => `
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div style="display:flex; align-items:center; gap:8px; margin-top:4px">
             ${p.marker}
-            <span style="flex:1;font-size:13px;opacity:.7">${p.seriesName}</span>
-            <span style="font-size:14px;font-weight:600;color:${p.color}">${formatCurrency(p.value, currency.value)}</span>
+            <span style="flex:1; font-size:13px; opacity:.7 ">${p.seriesName}</span>
+            <span style="font-size:14px; font-weight:600; color:${p.color}">${formatCurrency(p.value, currency.value)}</span>
           </div>`).join('')}
       </div>`,
       
   },
   xAxis: {
     type: 'category',
-    data: RevenueData.value.map(d => d.date),
+    data: revenueData.value.map(d => d.date),
     axisTick: { show: false },
   },
   yAxis: {
@@ -570,13 +570,13 @@ const chartOption = computed(() => ({
   series: [
     {
       name: 'Income', type: 'bar', barWidth: 20, barGap: '0%',
-      data: RevenueData.value.map(d => d.income),
-      itemStyle: { color: RevenueCategoriesMultiple.income.color, borderRadius: [5, 5, 0, 0] },
+      data: revenueData.value.map(d => d.income),
+      itemStyle: { color: revenueCategoriesMultiple.income.color, borderRadius: [5, 5, 0, 0] },
     },
     {
       name: 'Expense', type: 'bar', barWidth: 20,
-      data: RevenueData.value.map(d => d.expense),
-      itemStyle: { color: RevenueCategoriesMultiple.expense.color, borderRadius: [5, 5, 0, 0] },
+      data: revenueData.value.map(d => d.expense),
+      itemStyle: { color: revenueCategoriesMultiple.expense.color, borderRadius: [5, 5, 0, 0] },
     },
   ],
 }))
