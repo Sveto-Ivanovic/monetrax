@@ -2,6 +2,7 @@ package com.monetrax.monetrax.analytics.controller;
 
 import com.monetrax.monetrax.analytics.dto.AnalyticsRequest;
 import com.monetrax.monetrax.analytics.dto.AnalyticsResponse;
+import com.monetrax.monetrax.analytics.dto.DashboardAnalyticsResponse;
 import com.monetrax.monetrax.analytics.service.AnalyticsService;
 import com.monetrax.monetrax.auth.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -34,6 +35,21 @@ public class AnalyticsController {
             return ResponseEntity.ok().body(response);
         } catch (Exception e) {
             log.error("POST /analytics/fetch failed [userId={}]", userId, e);
+            throw e;
+        }
+    }
+
+
+    @PostMapping("/fetch/dashboard")
+    public ResponseEntity<DashboardAnalyticsResponse> fetchDashboardAnalytics(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        UUID userId = UUID.fromString(customUserDetails.getUserId());
+        log.info("Endpoint called: GET /analytics/fetch/dashboard [userId={}]", userId);
+        try {
+            DashboardAnalyticsResponse response = analyticsService.getDashboardAnalytics(userId);
+            log.debug("GET /analytics/fetch/dashboard succeeded [userId={}]", userId);
+            return ResponseEntity.ok().body(response);
+        } catch (Exception e) {
+            log.error("GET /analytics/fetch/dashboard failed [userId={}]", userId, e);
             throw e;
         }
     }

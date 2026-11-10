@@ -18,11 +18,13 @@ import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -360,10 +362,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<List<TotalBalanceMonthly>> totalBalanceMonthliesPerAcc = new ArrayList<>();
         List<List<MonthlyExpenses>> monthlyExpensesPerAcc = new ArrayList<>();
         List<List<MonthlyIncome>> monthlyIncomesPerAcc = new ArrayList<>();
-
-
         List<AccountBalance> accountBalances = new ArrayList<>();
-        List<LatestTransactions> latestTransactions = new ArrayList<>();
 
         Map<String, BigDecimal> balanceByMonth = new LinkedHashMap<>();
         Map<String, BigDecimal> incomeByMonth  = new LinkedHashMap<>();
@@ -447,15 +446,71 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .toList();
 
 
+        // Now find latest 10 transactions
+        List<TransactionEntity> transactionEntityList = transactionRepository.findRecentTransactions(userId, PageRequest.of(0, 10));
+        List<UUID> transactionIdsForTop10 = transactionEntityList.stream().map(TransactionEntity::getTransactionId).toList();
+        List<TransactionCategoriesEntity> transactionCategoriesEntitiesTop10 = transactionCategoriesRepository.fetchAllTransactionCategoryIdsInWithJoin(transactionIdsForTop10);
+        Map<UUID, Set<String>> mapUUIDCategoryNames = transactionCategoriesEntitiesTop10.stream()
+                .collect(Collectors.groupingBy(x->x.getId().getTransactionId(), Collectors.mapping(x->x.getCategory().getName(), Collectors.toSet())));
+
+        List<LatestTransactions> latestTransactions = transactionEntityList.stream()
+                .map(x-> LatestTransactions.builder()
+                        .amount(x.getAmount())
+                        .currency(x.getCurrency())
+                        .transactionName(x.getName())
+                        .dateTimeZone(x.getCreatedAt())
+                        .categories(mapUUIDCategoryNames.get(x.getTransactionId()).stream().toList())
+                        .categoryKind(x.getCategoryType())
+                        .build()).toList();
+
+
+        // find this months category amounts
+        OffsetDateTime timeTo = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime timeFrom = timeTo.withDayOfMonth(1)
+                .truncatedTo(ChronoUnit.DAYS);
+
+        List<TransactionEntity> transactionEntityListThisMonth = transactionRepository.findThisMonthsTransactions(userId, timeFrom, timeTo);
+        List<UUID> transactionIdsForMonth = transactionEntityListThisMonth.stream().map(TransactionEntity::getTransactionId).toList();
+        List<TransactionCategoriesEntity> transactionCategoriesEntitiesMonth = transactionCategoriesRepository.fetchAllTransactionCategoryIdsInWithJoin(transactionIdsForTop10);
+
+        Map<String, Set<TransactionEntity>> stringSetMap = transactionCategoriesEntitiesMonth.stream()
+                .collect(Collectors.groupingBy(x->x.getCategory().getName(), Collectors.mapping(x->x.getTransaction(), Collectors.toSet())));
+
+        List<CategoryAmounts> categoryAmountsIncome = new ArrayList<>();
+        List<CategoryAmounts> categoryAmountsExpense = new ArrayList<>();
+        for(String catName: stringSetMap.keySet()){
+            BigDecimal sumAmount = stringSetMap.get(catName).stream().map(x->x.getAmount())
+                    .reduce(BigDecimal.ZERO, (a, b)->a.add(b));
+
+            CategoryKind categoryKind = stringSetMap.get(catName).stream()
+                    .findFirst()
+                    .map(TransactionEntity::getCategoryType)
+                    .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+
+            if (categoryKind == CategoryKind.EXPENSE ||
+                    categoryKind == CategoryKind.ADJUSTMENT_MINUS ||
+                    categoryKind == CategoryKind.TRANSFER_TO) {
+
+                categoryAmountsExpense.add(CategoryAmounts.builder().categoryName(catName).categoryKind(categoryKind).amount(sumAmount).build());
+
+            } else {
+                categoryAmountsIncome.add(CategoryAmounts.builder().categoryName(catName).categoryKind(categoryKind).amount(sumAmount).build());
+            }
+
+        }
 
 
 
 
-
-
-
-
-        return null;
+        return DashboardAnalyticsResponse.builder()
+                .totalBalanceMonthlyList(profileBalance)
+                .monthlyExpenses(profileExpenses)
+                .monthlyIncomes(profileIncome)
+                .accountBalances(accountBalances)
+                .latestTransactions(latestTransactions)
+                .categoryAmountsIncome(categoryAmountsIncome)
+                .categoryAmountsExpense(categoryAmountsExpense)
+                .build();
     }
 
 
