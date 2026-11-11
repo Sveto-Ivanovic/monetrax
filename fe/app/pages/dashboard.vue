@@ -156,53 +156,85 @@
     </div>
 
 
-  <div class="transactions-piechart-category-wrapper">
+    <div class="transactions-piechart-category-wrapper">
 
-    <div class="latest-transactions">
-      
-
-      <div v-if="fetchedTemplateTest.latestFiveTransactions?.length>0" v-for="item in fetchedTemplateTest.latestFiveTransactions?" class="transaction-list-member">
-        
-        <div class="transaction-main-info">
-          
-          <div :class="item.categoryKind === 'EXPENSE' || 'TRANSFER_TO' || 'ADJUSTMENT_MINUS'? down-symbol : up-symbol">
-            {{item.categoryKind === 'EXPENSE' || 'TRANSFER_TO' || 'ADJUSTMENT_MINUS'? v : ▲ }}
-          </div>
-          
-          <div class="ta-names">
-            <span class="t1">  
-              {{item.transactionName}}
-            </span>
-            <span class="t2">
-              {{'Account: ' + item.accountName}}
-            </span>
-          </div>
-
-        </div>
-
-        <div class="categories-date">
-          
-
-
-        </div>
-
-      </div>
-      <div v-else class="no-data"> No transactions ... </div>
-
-    
-    
-    
-    
-    
+    <div class="as-left">
+            <span class="s-1">Recent transactions</span>
+            <span class="s-2">A little activity from across your accounts</span>
     </div>
 
+      <div class="latest-transactions">
+
+
+        <div v-if="fetchedTemplateTest.latestFiveTransactions?.length > 0"
+          v-for="item in fetchedTemplateTest.latestFiveTransactions" class="transaction-list-member">
+
+          <div class="transaction-main-info">
+
+            <div
+              :class="item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'down-symbol' : 'up-symbol'">
+              {{ item.categoryKind === 'EXPENSE' || item.categoryKind ===  'TRANSFER_TO' || item.categoryKind ===  'ADJUSTMENT_MINUS' ? '▼' : '▲' }}
+            </div>
+
+            <div class="ta-names">
+              <span class="t1">
+                {{ item.transactionName }}
+              </span>
+              <span class="t2">
+                {{ 'Account: ' + item.accountName }}
+              </span>
+            </div>
+
+          </div>
+
+          <div class="categories-date">
+
+            <UPopover mode="hover" enable-touch :ui="
+            {
+              content: 'bg-transparent ring-0 border-transparent shadow-none backdrop-blur-md'
+            }
+            ">
+              <span  class="category" :style="
+              {
+                '--category-light': stringToColors(item.categories[0] ?? 'unknown').light,
+                '--category-dark': stringToColors(item.categories[0] ?? 'unknown').dark,
+              }">
+                {{ item.categories[0] ?? 'unknown' }}
+              </span>
+
+              <template v-if="item.categories.length>1" #content>
+                <HoverCategories :categories="item.categories"></HoverCategories>
+              </template>
+            </UPopover>
+            
+
+
+            <div class="cat-date">
+              {{ formatDateTime(item.dateTimeZone) }}
+            </div>
+          </div>
+
+          <div :class=" item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'transaction-amount-negative' : 'transaction-amount-positive'">
+              {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? '-' + formatCurrency(item.amount, item.currency) : '+' + formatCurrency(item.amount, item.currency) }}
+          </div>
+
+        </div>
+        <div v-else class="no-data"> No transactions ... </div>
 
 
 
 
 
 
-  </div>
+      </div>
+
+
+
+
+
+
+
+    </div>
 
   </div>
 </template>
@@ -215,6 +247,8 @@ import { utcToZoned } from '~/utilis/timezoneUtilis/convertTimezone';
 import { formatCurrency } from '~/utilis/formaters/balanceFormater'
 import { VisXYContainer, VisLine } from '@unovis/vue'
 import { useElementSize } from '@vueuse/core'
+import { stringToColors } from '~/utilis/formaters/colorGetter';
+import { formatDateTime } from '~/utilis/formaters/dateTimeFormater';
 
 const userStore = useUserStore()
 console.log(userStore.userInfo)
@@ -607,7 +641,7 @@ const chartOption = computed(() => ({
             <span style="font-size:14px; font-weight:600; color:${p.color}">${formatCurrency(p.value, currency.value)}</span>
           </div>`).join('')}
       </div>`,
-      
+
   },
   xAxis: {
     type: 'category',
@@ -668,6 +702,7 @@ definePageMeta({
   display: flex;
   flex-direction: column;
   gap: 48px;
+  padding-bottom: 24px;
 }
 
 .main-cards {
@@ -1061,4 +1096,182 @@ definePageMeta({
 .ief-container {
   width: 100%;
 }
+
+
+.category {
+  padding: 0.123rem 0.63rem;
+  border: 1px solid var(--category-dark);
+  border-radius: 9999px;
+  background-color: var(--category-light);
+  color: var(--category-dark);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+
+.transactions-piechart-category-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+
+
+  padding: 24px;
+  background-color: rgb(255, 255, 255);
+
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.02),
+    0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.latest-transactions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.transaction-list-member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.transaction-list-member:last-child {
+  border-bottom: none;
+}
+
+.transaction-main-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.down-symbol,
+.up-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.down-symbol {
+  background-color: color-mix(in srgb, #ef4444 15%, transparent);
+  color: #ef4444;
+}
+
+.up-symbol {
+  background-color: color-mix(in srgb, #22c55e 15%, transparent);
+  color: #22c55e;
+}
+
+.ta-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.t1 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ui-text-highlighted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t2 {
+  font-size: 0.75rem;
+  color: var(--ui-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categories-date {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.cat-date {
+  font-size: 0.7rem;
+  color: var(--ui-text-muted);
+  white-space: nowrap;
+}
+
+.transaction-amount-negative {
+  min-width: 5rem;
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: red;
+  white-space: nowrap;
+}
+
+.transaction-amount-positive{
+    min-width: 5rem;
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgb(34, 150, 5);
+  white-space: nowrap;
+}
+
+.no-data {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--ui-text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .transaction-list-member {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "main amount"
+      "meta meta";
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem 0.25rem;
+  }
+
+  .transaction-main-info {
+    grid-area: main;
+  }
+
+  .transaction-amount {
+    grid-area: amount;
+    min-width: 0;
+    font-size: 0.9rem;
+  }
+
+  .categories-date {
+    grid-area: meta;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 2.75rem;
+  }
+
+  .down-symbol,
+  .up-symbol {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
 </style>

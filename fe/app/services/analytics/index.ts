@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/vue-query";
 import type {
   CommonErrorResponse
 } from "../usermanagement/types";
-import { FetchedDashboardAnalyticsData } from "./types";
+import type { FetchedDashboardAnalyticsData } from "./types";
 
 
 
