@@ -4,6 +4,18 @@ export interface FetchedTemplateTest {
     staticDataTotalIncome: MonthlyIncome[];
     totalBalanceByAccount: AccountBalance[];
     latestFiveTransactions: Transaction[];
+    categoryAmountsIncome?: CategoryAmounts[];
+    categoryAmountsExpense?: CategoryAmounts[];
+}
+
+export interface FetchedDashboardAnalyticsData {
+    staticDataTotalBalance: MonthlyBalance[];
+    staticDataTotalExpenses: MonthlyExpenses[];
+    staticDataTotalIncome: MonthlyIncome[];
+    totalBalanceByAccount: AccountBalance[];
+    latestFiveTransactions: Transaction[];
+    categoryAmountsIncome: CategoryAmounts[];
+    categoryAmountsExpense: CategoryAmounts[];
 }
 
 export interface MonthlyBalance {
@@ -40,7 +52,16 @@ export interface Transaction {
     currency: string;
     categories: string[];
     categoryKind: TransactionCategoryKind;
+    transactionId?: String;
+    accountName?: String;
 }
+
+export interface CategoryAmounts {
+    categoryName: String;
+    categoryKind: TransactionCategoryKind;
+    amount: number;
+}
+
 
 export type TransactionCategoryKind = 'EXPENSE' | 'INCOME' | 'TRANSFER_FROM' |
     'TRANSFER_TO' |

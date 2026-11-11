@@ -466,6 +466,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         .dateTimeZone(x.getCreatedAt())
                         .categories(mapUUIDCategoryNames.get(x.getTransactionId()).stream().toList())
                         .categoryKind(x.getCategoryType())
+                        .accountName(x.getAccount().getName())
+                        .transactionId(x.getTransactionId())
                         .build()).toList();
 
 

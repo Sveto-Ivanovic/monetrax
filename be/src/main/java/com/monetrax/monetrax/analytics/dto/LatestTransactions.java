@@ -22,4 +22,6 @@ public class LatestTransactions {
     private OffsetDateTime dateTimeZone;
     private List<String> categories;
     private CategoryKind categoryKind;
+    private UUID transactionId;
+    private String accountName;
 }

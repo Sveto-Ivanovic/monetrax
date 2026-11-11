@@ -156,7 +156,53 @@
     </div>
 
 
+  <div class="transactions-piechart-category-wrapper">
 
+    <div class="latest-transactions">
+      
+
+      <div v-if="fetchedTemplateTest.latestFiveTransactions?.length>0" v-for="item in fetchedTemplateTest.latestFiveTransactions?" class="transaction-list-member">
+        
+        <div class="transaction-main-info">
+          
+          <div :class="item.categoryKind === 'EXPENSE' || 'TRANSFER_TO' || 'ADJUSTMENT_MINUS'? down-symbol : up-symbol">
+            {{item.categoryKind === 'EXPENSE' || 'TRANSFER_TO' || 'ADJUSTMENT_MINUS'? v : ▲ }}
+          </div>
+          
+          <div class="ta-names">
+            <span class="t1">  
+              {{item.transactionName}}
+            </span>
+            <span class="t2">
+              {{'Account: ' + item.accountName}}
+            </span>
+          </div>
+
+        </div>
+
+        <div class="categories-date">
+          
+
+
+        </div>
+
+      </div>
+      <div v-else class="no-data"> No transactions ... </div>
+
+    
+    
+    
+    
+    
+    </div>
+
+
+
+
+
+
+
+  </div>
 
   </div>
 </template>
@@ -252,6 +298,7 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     currency: 'EUR',
     categories: ['Groceries', 'Food'],
     categoryKind: 'EXPENSE',
+    accountName: 'Checking Account'
   },
   {
     transactionName: 'Salary Payment',
@@ -260,6 +307,7 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     currency: 'EUR',
     categories: ['Income', 'Salary'],
     categoryKind: 'INCOME',
+    accountName: 'Savings Account',
   },
   {
     transactionName: 'Electricity Bill',
@@ -268,6 +316,7 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     currency: 'EUR',
     categories: ['Utilities', 'Electricity'],
     categoryKind: 'EXPENSE',
+    accountName: 'Savings Account',
   },
   {
     transactionName: 'Restaurant Dinner',
@@ -276,6 +325,7 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     currency: 'EUR',
     categories: ['Dining', 'Food'],
     categoryKind: 'EXPENSE',
+    accountName: 'Savings Account',
   },
   {
     transactionName: 'Online Shopping',
@@ -284,6 +334,7 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     currency: 'EUR',
     categories: ['Shopping', 'E-commerce'],
     categoryKind: 'EXPENSE',
+    accountName: 'Savings Account',
   }]
 }
 
