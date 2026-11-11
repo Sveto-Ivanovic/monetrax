@@ -37,9 +37,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     public List<TransactionEntity> fetchTransactionsForScheduler(List<UUID> transactionIds);
 
     @Query("""
-    select sum(t.amount) as amount,
-           'EUR' as currency,
-           format(t.createdAt as 'yyyy-MM') as month
+    select new com.monetrax.monetrax.analytics.dto.MonthlyBalance(
+           sum(t.amount),
+           'EUR',
+           format(t.createdAt as 'yyyy-MM'))
     from TransactionEntity t
     where t.account.accountId = ?1
       and t.createdAt >= ?2

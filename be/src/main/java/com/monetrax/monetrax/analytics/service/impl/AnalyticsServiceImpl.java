@@ -374,11 +374,16 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         // balance is calculated => balance = (balance + 1 month) - (income + 1 month) + (expense + 1 month)
         for(AccountEntity account : accountEntityList){
             Year currentYear = Year.now(ZoneOffset.UTC);
-            OffsetDateTime fromDate = OffsetDateTime.of(currentYear.getValue()-3, 1,1,0,0,0,0, ZoneOffset.UTC);
+
+            OffsetDateTime accountCreated = account.getCreatedAt();
+            OffsetDateTime windowStart = OffsetDateTime.of(currentYear.getValue() - 3, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC);
             OffsetDateTime timeNow = OffsetDateTime.now(ZoneOffset.UTC);
 
-            YearMonth start = YearMonth.from(fromDate);
+            OffsetDateTime accountStart = accountCreated.minusMonths(1);
+            YearMonth start = YearMonth.from(accountStart.isAfter(windowStart) ? accountStart : windowStart);
             YearMonth end = YearMonth.from(timeNow);
+
+            OffsetDateTime fromDate = start.atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
 
             List<MonthlyBalance> transactionEntityListIncome = transactionRepository.findMonthlyAmountsByMonth(account.getAccountId(),
                    fromDate, List.of(CategoryKind.INCOME,CategoryKind.ADJUSTMENT_PLUS, CategoryKind.TRANSFER_FROM));
