@@ -19,13 +19,17 @@
         <p>Welcome back! Please enter your details.</p>
       </div>
 
+      <div v-if="errorMessage" class="error-message">
+        {{ errorMessage }}
+      </div>
+
 
       <UFormField label="Email" name="email">
         <UInput v-model="state.email" placeholder="example@gmail.com" />
       </UFormField>
 
       <UFormField label="Password" name="password">
-        <UInput v-model="state.password" placeholder="••••••••" :type="show ? 'text' : 'password'"
+        <UInput v-model="state.password"  :type="show ? 'text' : 'password'"
           :ui="{ trailing: 'pe-1' }">
           <template #trailing>
             <UButton color="neutral" variant="link" size="sm" :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -44,7 +48,7 @@
       </div>
 
       <div class="flex justify-center">
-        <UButton type="submit" class="submit-button">
+        <UButton type="submit" class="submit-button" :loading="is_loading" :disabled="is_loading">
           Submit
         </UButton>
       </div>
@@ -64,6 +68,9 @@
 <script setup lang="ts">
 import * as v from 'valibot'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import { apiRouter } from '~/services/serviceWrapper'
+import type { LogInRequest, CommonErrorResponse } from '~/services/usermanagement/types'
+import { FetchError } from 'ofetch'
 
 const show = ref(false)
 const remeberMe = ref(false)
@@ -85,16 +92,51 @@ const state = reactive({
 })
 
 const is_loading = ref(false)
+let errorMessage = ref('')
 
 function redirectHome() {
   navigateTo('/')
 }
 
+const api = apiRouter.userApi()
+const loginUserMutation = api.loginUser()
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   is_loading.value = true
+  errorMessage.value = ''
   console.log(event.data)
-  /* small delay to simulate a network request */
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  const loginData: LogInRequest = {
+    email: event.data.email,
+    password: event.data.password
+  }
+
+  try {
+    const response = await loginUserMutation.mutateAsync(loginData)
+    console.log('Login successful:', response)
+    navigateTo('/dashboard')
+  } catch (error) {
+    console.error('Login failed:', error)
+    if (error instanceof FetchError) {
+      if (error.data && "errors" in error.data) {
+        const commonErrorResponse = error.data as CommonErrorResponse
+        console.log('Error details:', commonErrorResponse.errors)
+        errorMessage.value = commonErrorResponse.errors.map(err => err.message).join(', ')
+      }
+      else {
+        console.log('Error details:', error.data)
+        errorMessage.value = 'An unexpected error occurred.'
+      }
+    }
+    else if (error instanceof Error) {
+      console.log(`Login failed: ${error.message}`)
+      errorMessage.value = error.message
+      console.log(error)
+    }
+
+
+  } finally {
+    is_loading.value = false
+  }
   is_loading.value = false
 }
 
@@ -228,5 +270,17 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   justify-content: center;
   align-items: center;
   text-align: center;
+}
+
+.error-message {
+  color: red;
+  font-size: 18px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid red;
+  padding: 8px;
+  border-radius: 8px;
+  background: #ffe5e5;
 }
 </style>

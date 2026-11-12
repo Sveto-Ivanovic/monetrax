@@ -19,9 +19,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 public class UserUpdate {
-    @EmailCorrectnessConstraint
-    private String userEmail;
-
     @Size(min = 2, max = 40, message = "Size of the user name must be between 2 and 40 characters.")
     private String userName;
 

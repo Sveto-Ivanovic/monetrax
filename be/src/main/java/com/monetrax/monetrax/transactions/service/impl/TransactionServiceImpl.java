@@ -23,6 +23,7 @@ import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.categories.mapper.CategoryMapper;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
+import com.monetrax.monetrax.categories.service.impl.CategoryServiceImpl;
 import com.monetrax.monetrax.transactions.component.AiComponent;
 import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.*;
@@ -40,6 +41,7 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import jdk.jfr.Category;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -75,8 +77,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final AiAPiServiceImpl aiAPiService;
     private final AiComponent aiComponent;
     private final Validator validator;
+    private final CategoryServiceImpl categoryService;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -95,6 +98,7 @@ public class TransactionServiceImpl implements TransactionService {
         this.aiAPiService = aiAPiService;
         this.aiComponent = aiComponent;
         this.validator = validator;
+        this.categoryService = categoryService;
     }
 
     @AllArgsConstructor
@@ -202,6 +206,7 @@ public class TransactionServiceImpl implements TransactionService {
         log.debug("Fetched account transactions [accountId={}, transactionCount={}]", accountId, transactionEntities.size());
         List<TransactionInformationPart> informationParts;
 
+        List<String> listOfProducts;
         // if we have transactions in the account
         if(!transactionEntities.isEmpty()){
             // get all transaction ids
@@ -247,20 +252,29 @@ public class TransactionServiceImpl implements TransactionService {
                         // use mapper to create the TransactionInformationPart
                         return globalTransactionMapper.fromTransactionEntityToTransactionInformationPart(t, subListOfCategoriesTiedToTransaction);
                     }).toList();
+
+            // git list of all products in the account, i added this for autocomplete for when user wants to type their own bought products
+            listOfProducts = transactionLineItemsRepository.fetchAllTransactionsLineProductsWithIn(allTransactionIds)
+                    .stream().map(TransactionLineItemsEntity::getProductName)
+                    .distinct()
+                    .toList();
         }
         else{
             informationParts=new ArrayList<>();
+            listOfProducts = new ArrayList<>();
         }
 
-        //*************************************************************************************************************************
-        // logic for fetching alerts
-        //*************************************************************************************************************************
+        List<CategoryInformation> categoryInformationList = categoryService.getAllCategories(userId).getCategories();
+
+
 
         AccountInformation accountInformation = accountMapper.fromAccountEntityToAccountInformation(account);
         log.debug("Built account transactions response [accountId={}, userId={}, count={}]", accountId, userId, informationParts.size());
         return ListOfAccountTransactions.builder()
                 .account(accountInformation)
                 .transactions(informationParts)
+                .categoryInformationList(categoryInformationList)
+                .listOfProducts(listOfProducts)
                 .build();
 
 

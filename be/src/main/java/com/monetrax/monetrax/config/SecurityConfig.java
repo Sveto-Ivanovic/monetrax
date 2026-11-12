@@ -20,6 +20,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.CrossOriginResourcePolicyHeaderWriter;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +48,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws  Exception{
         String[] excludeRoutes = {"/", "/auth/login", "/auth/token/refresh", "/auth/token/logout",  "/auth/health-check", "/error", "/user/create", "/h2-console/**"};
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                         .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true).preload(true))
@@ -75,6 +78,24 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "https://api.monetrax.svivanovic.org",
+                "https://www.monetrax.svivanovic.org"
+        ));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L); // cache preflight for an hour
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
 }
