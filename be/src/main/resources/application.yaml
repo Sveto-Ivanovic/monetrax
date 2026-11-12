@@ -46,3 +46,10 @@ aes-encryption:
   iv-length-encrypt: 12
   tag-length-encrypt: 16
   local-passphrase: ${LOCAL_PASSPHRASE}
+
+
+external-apis:
+  frankfurter:
+    baseUrl:  https://api.frankfurter.dev
+    readTimeout: 5
+    connectTimeout: 3
