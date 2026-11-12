@@ -155,79 +155,84 @@
 
     </div>
 
-
     <div class="transactions-piechart-category-wrapper">
 
-    <div class="as-left">
-            <span class="s-1">Recent transactions</span>
-            <span class="s-2">A little activity from across your accounts</span>
-    </div>
 
-      <div class="latest-transactions">
+      <div class="transactions-wrapper">
 
-
-        <div v-if="fetchedTemplateTest.latestFiveTransactions?.length > 0"
-          v-for="item in fetchedTemplateTest.latestFiveTransactions" class="transaction-list-member">
-
-          <div class="transaction-main-info">
-
-            <div
-              :class="item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'down-symbol' : 'up-symbol'">
-              {{ item.categoryKind === 'EXPENSE' || item.categoryKind ===  'TRANSFER_TO' || item.categoryKind ===  'ADJUSTMENT_MINUS' ? '▼' : '▲' }}
-            </div>
-
-            <div class="ta-names">
-              <span class="t1">
-                {{ item.transactionName }}
-              </span>
-              <span class="t2">
-                {{ 'Account: ' + item.accountName }}
-              </span>
-            </div>
-
-          </div>
-
-          <div class="categories-date">
-
-            <UPopover mode="hover" enable-touch :ui="
-            {
-              content: 'bg-transparent ring-0 border-transparent shadow-none backdrop-blur-md'
-            }
-            ">
-              <span  class="category" :style="
-              {
-                '--category-light': stringToColors(item.categories[0] ?? 'unknown').light,
-                '--category-dark': stringToColors(item.categories[0] ?? 'unknown').dark,
-              }">
-                {{ item.categories[0] ?? 'unknown' }}
-              </span>
-
-              <template v-if="item.categories.length>1" #content>
-                <HoverCategories :categories="item.categories"></HoverCategories>
-              </template>
-            </UPopover>
-            
-
-
-            <div class="cat-date">
-              {{ formatDateTime(item.dateTimeZone) }}
-            </div>
-          </div>
-
-          <div :class=" item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'transaction-amount-negative' : 'transaction-amount-positive'">
-              {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? '-' + formatCurrency(item.amount, item.currency) : '+' + formatCurrency(item.amount, item.currency) }}
-          </div>
-
+        <div class="as-left">
+                <span class="s-1">Recent transactions</span>
+                <span class="s-2">A little activity from across your accounts</span>
         </div>
-        <div v-else class="no-data"> No transactions ... </div>
+
+        <div class="latest-transactions">
 
 
+          <div v-if="fetchedTemplateTest.latestFiveTransactions?.length > 0"
+            v-for="item in fetchedTemplateTest.latestFiveTransactions" class="transaction-list-member">
+
+            <div class="transaction-main-info">
+
+              <div
+                :class="item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'down-symbol' : 'up-symbol'">
+                {{ item.categoryKind === 'EXPENSE' || item.categoryKind ===  'TRANSFER_TO' || item.categoryKind ===  'ADJUSTMENT_MINUS' ? '▼' : '▲' }}
+              </div>
+
+              <div class="ta-names">
+                <span class="t1">
+                  {{ item.transactionName }}
+                </span>
+                <span class="t2">
+                  {{ 'Account: ' + item.accountName }}
+                </span>
+              </div>
+
+            </div>
+
+            <div class="categories-date">
+
+              <UPopover mode="hover" enable-touch :ui="
+              {
+                content: 'bg-transparent ring-0 border-transparent shadow-none backdrop-blur-md'
+              }
+              ">
+                <span  class="category" :style="
+                {
+                  '--category-light': stringToColors(item.categories[0] ?? 'unknown').light,
+                  '--category-dark': stringToColors(item.categories[0] ?? 'unknown').dark,
+                }">
+                  {{ item.categories[0] ?? 'unknown' }}
+                </span>
+
+                <template v-if="item.categories.length>1" #content>
+                  <HoverCategories :categories="item.categories"></HoverCategories>
+                </template>
+              </UPopover>
+              
 
 
+              <div class="cat-date">
+                {{ formatDateTime(item.dateTimeZone) }}
+              </div>
+            </div>
 
+            <div :class=" item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'transaction-amount-negative' : 'transaction-amount-positive'">
+                {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? '-' + formatCurrency(item.amount, item.currency) : '+' + formatCurrency(item.amount, item.currency) }}
+            </div>
 
+          </div>
+          <div v-else class="no-data"> No transactions ... </div>
       </div>
 
+      <div class="expense-chart"> 
+        <ClientOnly>
+            <VChart :option="optionPieChart1" autoresize style="height: 350px; width: 100%" />
+        </ClientOnly>
+      
+      </div>
+
+
+    </div>
 
 
 
@@ -369,7 +374,52 @@ const fetchedTemplateTest: FetchedTemplateTest = {
     categories: ['Shopping', 'E-commerce'],
     categoryKind: 'EXPENSE',
     accountName: 'Savings Account',
-  }]
+  }],
+  categoryAmountsIncome: [
+    {
+      categoryName: 'Salary',
+      categoryKind: 'INCOME',
+      amount: 2500
+    },
+    {
+      categoryName: 'Freelancing',
+      categoryKind: 'INCOME',
+      amount: 750
+    },
+    {
+      categoryName: 'Investments',
+      categoryKind: 'INCOME',
+      amount: 320
+    },
+    {
+      categoryName: 'Gifts',
+      categoryKind: 'INCOME',
+      amount: 150
+    }
+  ],
+
+  categoryAmountsExpense: [
+    {
+      categoryName: 'Food',
+      categoryKind: 'EXPENSE',
+      amount: 450
+    },
+    {
+      categoryName: 'Transportation',
+      categoryKind: 'EXPENSE',
+      amount: 120
+    },
+    {
+      categoryName: 'Rent',
+      categoryKind: 'EXPENSE',
+      amount: 800
+    },
+    {
+      categoryName: 'Entertainment',
+      categoryKind: 'EXPENSE',
+      amount: 180
+    }
+  ]
 }
 
 type ChartPoint = { x: number; y: number }
@@ -689,6 +739,112 @@ const displayTop3Accs = computed<Account[]>(() => {
 
   return x
 })
+
+# the pie charts
+let optionPieChart1 =  computed(() => (
+  
+let sum = 0;
+const expenseData = fetchedTemplateTest.categoryAmountsExpense
+
+expenseData.forEach((x)=> {
+  sum = sum + x.amount
+})
+
+const subtext = 'How your ' + formatCurrency(sum, expenseData[0].currency) + ' was spent this month this month'
+const data = expenseData.map((x)=> {
+  value: x.amount, name: x.categoryName
+})
+  
+return {
+title: {
+    text: 'Spending by category',
+    subtext: subtext,
+    left: 'center'
+  },
+  tooltip: {
+    trigger: 'item'
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left'
+  },
+  series: [
+    {
+      name: 'Access From',
+      type: 'pie',
+      radius: '50%',
+      data: data,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }
+  ],
+   tooltip: {
+    trigger: 'item',
+    backgroundColor: 'rgb(222, 240, 245)',
+    borderWidth: 0,
+
+      valueFormatter: (value) => formatCurrency(value, 'EUR')
+
+  },
+}))
+
+let optionPieChart2 =  computed(() => (
+let sum = 0;
+const expenseData = fetchedTemplateTest.categoryAmountsIncome
+
+expenseData.forEach((x)=> {
+  sum = sum + x.amount
+})
+
+const subtext = 'How your ' + formatCurrency(sum, expenseData[0].currency) + ' was spent this month this month'
+const data = expenseData.map((x)=> {
+  value: x.amount, name: x.categoryName
+})
+  
+return {
+title: {
+    text: 'Spending by category',
+    subtext: subtext,
+    left: 'center'
+  },
+  tooltip: {
+    trigger: 'item'
+  },
+  legend: {
+    orient: 'vertical',
+    left: 'left'
+  },
+  series: [
+    {
+      name: 'Access From',
+      type: 'pie',
+      radius: '50%',
+      data: data,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }
+    }
+  ],
+     tooltip: {
+    trigger: 'item',
+    backgroundColor: 'rgb(222, 240, 245)',
+    borderWidth: 0,
+
+      valueFormatter: (value) => formatCurrency(value, 'EUR')
+
+  },
+}))
+
+
 
 definePageMeta({
   middleware: ['require-user-info'],
@@ -1109,9 +1265,16 @@ definePageMeta({
   line-height: 1.25rem;
 }
 
-
-.transactions-piechart-category-wrapper {
+.transactions-piechart-category-wrapper{
   display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+
+.transactions-wrapper {
+  display: flex;
+  flex:2;
   flex-direction: column;
   gap: 16px;
   width: 100%;
