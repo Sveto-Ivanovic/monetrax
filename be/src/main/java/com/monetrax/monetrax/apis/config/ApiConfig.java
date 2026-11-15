@@ -15,8 +15,8 @@ public class ApiConfig {
 
 
 
-    @Bean
-    RestClient getFrankfurterClient( RestClient.Builder builder, @Value("${external-apis.frankfurter.baseUrl}") String baseUrl,
+    @Bean("frankfurterRestClient")
+    RestClient getFrankfurterClient( @Value("${external-apis.frankfurter.baseUrl}") String baseUrl,
                                      @Value("${external-apis.frankfurter.readTimeout}") int readTimeout,
                                      @Value("${external-apis.frankfurter.connectTimeout}") int connectTimeout
                                      ){
@@ -28,7 +28,11 @@ public class ApiConfig {
         factory.setReadTimeout(Duration.ofSeconds(readTimeout));
 
 
-        return builder.clone().baseUrl(baseUrl).requestFactory(factory).build();
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(factory)
+                .build();
+
     }
 
 

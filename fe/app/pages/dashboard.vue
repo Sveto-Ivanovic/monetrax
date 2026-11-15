@@ -1,6 +1,23 @@
 <template>
   <div class="dashboard">
 
+    <div class="welcome-header">
+      <div class="date-time-now">
+        {{ formatDateTime( utcToZoned(new Date(), userStore.selectedTimeZone)).slice(0, 11) }}
+      </div>
+
+      <div class="welcome-message">
+
+        {{ "Welcome back " + userStore.userInfo?.userInfo.name }}
+
+      </div>
+      <div class="snapshot-message">
+        Here’s your financial snapshot across all your accounts.
+      </div>
+    </div>
+
+
+
     <div class="main-cards">
 
       <div class="main-card total-balance-card ">
@@ -90,11 +107,19 @@
 
       <div class="income-expense-flow">
 
-        <div class="ief-header">
+        <div class="flex justfy-between"
+          style="display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%;">
+          <div class="ief-header">
 
-          <span class="s-1">Cash flow</span>
-          <span class="s-2">Income and spending across all accounts</span>
+            <span class="s-1">Cash flow</span>
+            <span class="s-2">Income and spending across all accounts</span>
+
+
+          </div>
+
+          <USelect v-model="selectYearMonth" :items="items" />
         </div>
+
 
         <div class="ief-container" ref="chartEl">
           <ClientOnly>
@@ -161,21 +186,22 @@
       <div class="transactions-wrapper">
 
         <div class="as-left">
-                <span class="s-1">Recent transactions</span>
-                <span class="s-2">A little activity from across your accounts</span>
+          <span class="s-1">Recent transactions</span>
+          <span class="s-2">A little activity from across your accounts</span>
         </div>
 
         <div class="latest-transactions">
 
 
           <div v-if="fetchedTemplateTest.latestFiveTransactions?.length > 0"
-            v-for="item in fetchedTemplateTest.latestFiveTransactions" class="transaction-list-member">
+            v-for="item in fetchedTemplateTest.latestFiveTransactions.slice(0, 5)" class="transaction-list-member">
 
             <div class="transaction-main-info">
 
               <div
                 :class="item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'down-symbol' : 'up-symbol'">
-                {{ item.categoryKind === 'EXPENSE' || item.categoryKind ===  'TRANSFER_TO' || item.categoryKind ===  'ADJUSTMENT_MINUS' ? '▼' : '▲' }}
+                {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind ===
+                  'ADJUSTMENT_MINUS' ? '▼' : '▲' }}
               </div>
 
               <div class="ta-names">
@@ -191,50 +217,50 @@
 
             <div class="categories-date">
 
-              <UPopover mode="hover" enable-touch :ui="
-              {
+              <UPopover mode="hover" enable-touch :ui="{
                 content: 'bg-transparent ring-0 border-transparent shadow-none backdrop-blur-md'
               }
-              ">
-                <span  class="category" :style="
-                {
+                ">
+                <span class="category" :style="{
                   '--category-light': stringToColors(item.categories[0] ?? 'unknown').light,
                   '--category-dark': stringToColors(item.categories[0] ?? 'unknown').dark,
                 }">
                   {{ item.categories[0] ?? 'unknown' }}
                 </span>
 
-                <template v-if="item.categories.length>1" #content>
+                <template v-if="item.categories.length > 1" #content>
                   <HoverCategories :categories="item.categories"></HoverCategories>
                 </template>
               </UPopover>
-              
+
 
 
               <div class="cat-date">
-                {{ formatDateTime(item.dateTimeZone) }}
+                {{ formatDateTime(utcToZoned(item.dateTimeZone, userStore.selectedTimeZone)) }}
               </div>
             </div>
 
-            <div :class=" item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'transaction-amount-negative' : 'transaction-amount-positive'">
-                {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? '-' + formatCurrency(item.amount, item.currency) : '+' + formatCurrency(item.amount, item.currency) }}
+            <div
+              :class="item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind === 'ADJUSTMENT_MINUS' ? 'transaction-amount-negative' : 'transaction-amount-positive'">
+              {{ item.categoryKind === 'EXPENSE' || item.categoryKind === 'TRANSFER_TO' || item.categoryKind ===
+                'ADJUSTMENT_MINUS' ? '-' + formatCurrency(item.amount, item.currency) : '+' + formatCurrency(item.amount,
+                  item.currency) }}
             </div>
 
           </div>
           <div v-else class="no-data"> No transactions ... </div>
+        </div>
+
+
       </div>
 
-      <div class="expense-chart"> 
+
+      <div class="expense-chart">
         <ClientOnly>
-            <VChart :option="optionPieChart1" autoresize style="height: 350px; width: 100%" />
+          <VChart :option="optionPieChart1" autoresize style="height: 350px; width: 100%" />
         </ClientOnly>
-      
+
       </div>
-
-
-    </div>
-
-
 
 
 
@@ -254,6 +280,8 @@ import { VisXYContainer, VisLine } from '@unovis/vue'
 import { useElementSize } from '@vueuse/core'
 import { stringToColors } from '~/utilis/formaters/colorGetter';
 import { formatDateTime } from '~/utilis/formaters/dateTimeFormater';
+import { isNumber } from '@unovis/ts';
+import { da } from '@nuxt/ui/runtime/locale/index.js';
 
 const userStore = useUserStore()
 console.log(userStore.userInfo)
@@ -428,21 +456,21 @@ const chartData = computed<ChartPoint[]>(() =>
   getBalance.value.xData.map((date, i) => ({
     x: date.getTime(),
     y: getBalance.value.yData[i]!,
-  }))
+  })).slice(-10)
 )
 
 const incomeChartData = computed<ChartPoint[]>(() =>
   getIncome.value.xData.map((date, i) => ({
     x: date.getTime(),
     y: getIncome.value.yData[i]!,
-  }))
+  })).slice(-10)
 )
 
 const expenseChartData = computed<ChartPoint[]>(() =>
   getExpenses.value.xData.map((date, i) => ({
     x: date.getTime(),
     y: getExpenses.value.yData[i]!,
-  }))
+  })).slice(-10)
 )
 
 
@@ -646,8 +674,6 @@ const getExpenses = computed<{
 })
 
 /* the multi barchart part */
-
-
 type DataProps = {
   income?: number;
   expense?: number;
@@ -659,15 +685,42 @@ const revenueCategoriesMultiple = {
   expense: { name: "Expense", color: "#c52222" },
 };
 
+const selectYearMonth = ref('Month')
+const items = ref(['Month', 'Year'])
 const revenueData = computed<DataProps[]>(() => {
 
-  return getIncome.value.xData
-    .map((date, i) => ({
-      date: date.toISOString().slice(0, 7),
-      income: getIncome.value.yData[i]!,
-      expense: getExpenses.value.yData[i]!,
-    }))
-    .slice(-7)
+
+  if (selectYearMonth.value === "Month") {
+    return getIncome.value.xData
+      .map((date, i) => ({
+        date: date.toISOString().slice(0, 7),
+        income: getIncome.value.yData[i]!,
+        expense: getExpenses.value.yData[i]!,
+      }))
+      .slice(-5)
+  }
+  else {
+    const yearlyData = getIncome.value.xData.reduce((acc, date, i) => {
+      const year = date.getFullYear().toString();
+
+      if (!acc[year]) {
+        acc[year] = {
+          date: year,
+          income: 0,
+          expense: 0,
+        };
+      }
+
+      acc[year].income += getIncome.value.yData[i]!;
+      acc[year].expense += getExpenses.value.yData[i]!;
+
+      return acc;
+    }, {} as Record<string, { date: string; income: number; expense: number }>);
+
+    return Object.values(yearlyData).slice(-5);
+
+  }
+
 })
 
 const currency = computed(() => fetchedTemplateTest.staticDataTotalBalance[0]?.currency ?? 'EUR')
@@ -717,7 +770,6 @@ const chartOption = computed(() => ({
 }))
 
 /* accounts */
-
 type Account = {
   accountName: string
   bankNumLast4: string
@@ -740,109 +792,125 @@ const displayTop3Accs = computed<Account[]>(() => {
   return x
 })
 
-# the pie charts
-let optionPieChart1 =  computed(() => (
-  
-let sum = 0;
-const expenseData = fetchedTemplateTest.categoryAmountsExpense
+// pirecharts
+let optionPieChart1 = computed(() => {
 
-expenseData.forEach((x)=> {
-  sum = sum + x.amount
-})
+  let sum = 0
+  const expenseData = fetchedTemplateTest.categoryAmountsExpense
 
-const subtext = 'How your ' + formatCurrency(sum, expenseData[0].currency) + ' was spent this month this month'
-const data = expenseData.map((x)=> {
-  value: x.amount, name: x.categoryName
-})
-  
-return {
-title: {
-    text: 'Spending by category',
-    subtext: subtext,
-    left: 'center'
-  },
-  tooltip: {
-    trigger: 'item'
-  },
-  legend: {
-    orient: 'vertical',
-    left: 'left'
-  },
-  series: [
-    {
-      name: 'Access From',
-      type: 'pie',
-      radius: '50%',
-      data: data,
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
+  expenseData?.forEach((x) => {
+    sum = sum + x.amount
+  })
+
+  const subtext = 'How your ' + formatCurrency(sum, 'EUR') + ' was spent this month'
+  const data = expenseData?.map((x) => ({
+    value: x.amount,
+    name: x.categoryName,
+  })).sort((a, b) => b.value - a.value);
+
+  const result = data && data?.length > 9
+    ? [
+      ...data.slice(0, 9),
+      {
+        value: data.slice(9).reduce((sum, x) => sum + x.value, 0),
+        name: "Rest",
+      },
+    ]
+    : data;
+
+
+  console.log(data)
+  return {
+    title: {
+      text: 'Spending by category',
+      subtext: subtext,
+      left: 'center'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left'
+    },
+    series: [
+      {
+        name: 'Access From',
+        type: 'pie',
+        radius: '50%',
+        data: result,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
         }
       }
+    ],
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgb(222, 240, 245)',
+      borderWidth: 0,
+
+      valueFormatter: (value: any) => {
+        return isNumber(value) ? formatCurrency(value, 'EUR') : value
+      }
+
+    },
+  }
+
+})
+
+let optionPieChart2 = computed(() => {
+  let sum = 0;
+  const expenseData = fetchedTemplateTest.categoryAmountsIncome
+  expenseData?.forEach((x) => {
+    sum = sum + x.amount
+  })
+
+  const subtext = 'How your ' + formatCurrency(sum, 'EUR') + ' was spent this month this month'
+  const data = expenseData?.map((x) => {
+
+    return {
+      "value": x.amount, "name": x.categoryName
     }
-  ],
-   tooltip: {
-    trigger: 'item',
-    backgroundColor: 'rgb(222, 240, 245)',
-    borderWidth: 0,
+  })
 
-      valueFormatter: (value) => formatCurrency(value, 'EUR')
-
-  },
-}))
-
-let optionPieChart2 =  computed(() => (
-let sum = 0;
-const expenseData = fetchedTemplateTest.categoryAmountsIncome
-
-expenseData.forEach((x)=> {
-  sum = sum + x.amount
-})
-
-const subtext = 'How your ' + formatCurrency(sum, expenseData[0].currency) + ' was spent this month this month'
-const data = expenseData.map((x)=> {
-  value: x.amount, name: x.categoryName
-})
-  
-return {
-title: {
-    text: 'Spending by category',
-    subtext: subtext,
-    left: 'center'
-  },
-  tooltip: {
-    trigger: 'item'
-  },
-  legend: {
-    orient: 'vertical',
-    left: 'left'
-  },
-  series: [
-    {
-      name: 'Access From',
-      type: 'pie',
-      radius: '50%',
-      data: data,
-      emphasis: {
-        itemStyle: {
-          shadowBlur: 10,
-          shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)'
+  return {
+    title: {
+      text: 'Spending by category',
+      subtext: subtext,
+      left: 'center'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left'
+    },
+    series: [
+      {
+        name: 'Access From',
+        type: 'pie',
+        radius: '50%',
+        data: data,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
         }
       }
-    }
-  ],
-     tooltip: {
-    trigger: 'item',
-    backgroundColor: 'rgb(222, 240, 245)',
-    borderWidth: 0,
+    ],
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgb(222, 240, 245)',
+      borderWidth: 0,
 
-      valueFormatter: (value) => formatCurrency(value, 'EUR')
+      valueFormatter: (value: any) => {
+        return isNumber(value) ? formatCurrency(value, 'EUR') : value
+      }
 
-  },
-}))
+    },
+  }
+})
 
 
 
@@ -857,7 +925,7 @@ definePageMeta({
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 24px;
   padding-bottom: 24px;
 }
 
@@ -1032,7 +1100,7 @@ definePageMeta({
   align-items: center;
   flex-direction: column;
   min-height: 400px;
-  min-width: 450px;
+  min-width: 350px;
 
   padding: 24px;
   background-color: rgb(255, 255, 255);
@@ -1128,7 +1196,7 @@ definePageMeta({
   flex-direction: column;
 
   min-height: 400px;
-  min-width: 450px;
+  min-width: 350px;
 
   padding: 24px;
   background-color: rgb(255, 255, 255);
@@ -1265,19 +1333,20 @@ definePageMeta({
   line-height: 1.25rem;
 }
 
-.transactions-piechart-category-wrapper{
+.transactions-piechart-category-wrapper {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  gap: 32px;
 }
 
 
 .transactions-wrapper {
   display: flex;
-  flex:2;
+  flex: 2;
   flex-direction: column;
   gap: 16px;
-  width: 100%;
+  min-width: 350px;
 
 
   padding: 24px;
@@ -1386,8 +1455,8 @@ definePageMeta({
   white-space: nowrap;
 }
 
-.transaction-amount-positive{
-    min-width: 5rem;
+.transaction-amount-positive {
+  min-width: 5rem;
   text-align: right;
   font-size: 0.95rem;
   font-weight: 600;
@@ -1400,6 +1469,22 @@ definePageMeta({
   text-align: center;
   color: var(--ui-text-muted);
   font-size: 0.875rem;
+}
+
+.expense-chart {
+  min-height: 350px;
+  flex: 1;
+  min-width: 350px;
+
+  padding: 24px;
+  background-color: rgb(255, 255, 255);
+
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.02),
+    0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 640px) {
@@ -1434,6 +1519,55 @@ definePageMeta({
   .up-symbol {
     width: 1.75rem;
     height: 1.75rem;
+  }
+  
+}
+
+
+.welcome-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+}
+
+.date-time-now {
+  font-size: 18px;
+  font-weight: 600;
+  color: #8b95a5;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.welcome-message {
+  font-size: 40px;
+  font-weight: 700;
+  color: #03245a;
+  letter-spacing: -0.8px;
+  line-height: 1.2;
+}
+
+.snapshot-message {
+  font-size: 16px;
+  font-weight: 400;
+  color: #8490a0;
+  line-height: 1.6;
+  margin-top: 2px;
+}
+
+
+@media (max-width: 768px) {
+  .welcome-header {
+    padding: 16px 0;
+    gap: 7px;
+  }
+
+  .welcome-message {
+    font-size: 24px;
+  }
+
+  .snapshot-message {
+    font-size: 13px;
   }
 }
 

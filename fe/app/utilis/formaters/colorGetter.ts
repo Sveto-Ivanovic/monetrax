@@ -24,3 +24,12 @@ export function stringToColors(str: string) {
     dark: `hsl(${hue}, ${saturation}%, ${darkLightness}%)`,
   }
 }
+
+export const categoryTypeStyle: Record<string, { label: string; color: string }> = {
+  INCOME:           { label: 'Income',           color: '#15803d' }, // dark green
+  TRANSFER_FROM:    { label: 'Transfer from',    color: '#22c55e' }, // medium green
+  ADJUSTMENT_PLUS:  { label: 'Adjustment plus',  color: '#65a30d' }, // lime green
+  EXPENSE:          { label: 'Expense',          color: '#b91c1c' }, // dark red
+  TRANSFER_TO:      { label: 'Transfer to',      color: '#ef4444' }, // bright red
+  ADJUSTMENT_MINUS: { label: 'Adjustment minus', color: '#f97316' }, // red-orange
+}

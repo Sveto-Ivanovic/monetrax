@@ -62,21 +62,15 @@ const userItems = computed<DropdownMenuItem[][]>(() => [
 
 const route = useRoute();
 
-const labels: Record<string, { label: string; icon: string }> = {
-    dashboard: { label: 'Dashboard', icon: 'i-lucide-layout-dashboard' },
-    accounts: { label: 'Accounts', icon: 'i-lucide-wallet' },
-    categories: { label: 'Categories', icon: 'i-lucide-tags' },
-    alerts: { label: 'Alerts', icon: 'i-lucide-bell' },
-    profile: { label: 'Profile', icon: 'i-lucide-user' },
-}
+const labels = useBreadcrumbs();
 
 const items = computed<BreadcrumbItem[]>(() => {
     console.log('Current route path:', route.path)
     const segments = route.path.split('/').filter(x => x !== '')
 
     return segments.map((segment, i) => ({
-        label: labels[segment]?.label ?? segment,
-        icon: labels[segment]?.icon,
+        label: labels.value[segment]?.label ?? segment,
+        icon: labels.value[segment]?.icon,
         to: '/' + segments.slice(0, i + 1).join('/'),
     }
     ))
@@ -152,9 +146,7 @@ const selectedTimeZone = computed({
                     @click="open = !open" />
             </div>
 
-            <div class="flex-1 p-4">
-                <Placeholder class="size-full" />
-            </div>
+         
         </div>
 
         <div class="page-main-wrapper">

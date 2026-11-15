@@ -31,3 +31,15 @@ background-image:
   min-height: 100vh;
 }
    
+
+.global-category {
+    padding: 0.123rem 0.63rem;
+    border: 1px solid var(--category-dark);
+    border-radius: 9999px;
+    background-color: var(--category-light);
+    color: var(--category-dark);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    white-space: nowrap;
+}

@@ -9,8 +9,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
     modules: ['@nuxt/ui', '@pinia/nuxt','pinia-plugin-persistedstate/nuxt', 'nuxt-echarts'],
     echarts: {
-    charts: ['BarChart'],
-    components: ['GridComponent', 'TooltipComponent', 'LegendComponent'],
+    charts: ['BarChart', 'PieChart', 'LineChart'],
+    components: ['GridComponent', 'TooltipComponent', 'LegendComponent', 'TitleComponent'],
     renderer: 'canvas',
     },
 

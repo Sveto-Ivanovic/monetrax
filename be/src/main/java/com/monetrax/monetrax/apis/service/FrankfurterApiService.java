@@ -15,7 +15,7 @@ public class FrankfurterApiService {
 
     private final RestClient restClient;
 
-    public FrankfurterApiService(@Qualifier("getFrankfurterClient") RestClient restClient) {
+    public FrankfurterApiService(@Qualifier("frankfurterRestClient") RestClient restClient) {
         this.restClient = restClient;
     }
     public FrankfurterV2Response getConversionFactor(String from, String to, LocalDate localDate){

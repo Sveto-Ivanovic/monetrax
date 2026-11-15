@@ -18,6 +18,8 @@ import com.monetrax.monetrax.ai.repository.MessageHistoryRepository;
 import com.monetrax.monetrax.ai.service.AiAPiService;
 import com.monetrax.monetrax.ai.service.impl.AiAPiServiceImpl;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
+import com.monetrax.monetrax.apis.dto.FrankfurterV2Response;
+import com.monetrax.monetrax.apis.service.FrankfurterApiService;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
@@ -78,8 +80,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final AiComponent aiComponent;
     private final Validator validator;
     private final CategoryServiceImpl categoryService;
+    private final FrankfurterApiService frankfurterApiService;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService, FrankfurterApiService frankfurterApiService) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -99,6 +102,7 @@ public class TransactionServiceImpl implements TransactionService {
         this.aiComponent = aiComponent;
         this.validator = validator;
         this.categoryService = categoryService;
+        this.frankfurterApiService = frankfurterApiService;
     }
 
     @AllArgsConstructor
@@ -307,6 +311,16 @@ public class TransactionServiceImpl implements TransactionService {
         // conversion logic should be implemented bellow
         //************************************************************************************************************************
         BigDecimal amountNative = transactionCreate.getAmount();
+        BigDecimal conversionFactor;
+        if(account.getCurrency().equals(transactionCreate.getCurrency())) {
+            LocalDate localDate = transactionCreate.getCustomCreationDate() == null ? LocalDate.now(ZoneOffset.UTC) : transactionCreate.getCustomCreationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate();
+            FrankfurterV2Response frankfurterV2Response = frankfurterApiService.getConversionFactor(transactionCreate.getCurrency(), account.getCurrency(), localDate);
+            conversionFactor = BigDecimal.valueOf(frankfurterV2Response.getRate());
+
+        } else{
+            conversionFactor = new BigDecimal("1.00");
+        }
+
         //************************************************************************************************************************
 
         if(!categoryKind.equals(CategoryKind.EXPENSE) && !transactionCreate.getLineInformation().isEmpty()){
@@ -320,7 +334,7 @@ public class TransactionServiceImpl implements TransactionService {
                 account,
                 amountNative,
                 categoryKind,
-                new BigDecimal("1.00"));
+                conversionFactor);
 
         TransactionEntity transactionEntitySaved = transactionRepository.save(transactionEntity);
         log.info("Saved transaction with id={} for accountId={}", transactionEntitySaved.getTransactionId(), accountId);
