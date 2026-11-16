@@ -1,3 +1,5 @@
+import type { CategoryKind } from "../categories/types"
+
 export type RuleType =
   | 'LESS_OR_EQUAL'
   | 'GREATER_OR_EQUAL'
@@ -20,6 +22,7 @@ export type RuleType =
 export interface AlertState {
   categoryId: string
   categoryName: string
+  categoryKind: CategoryKind
   amount: number
   numOfTransactions: number
   avgPerTransaction: number

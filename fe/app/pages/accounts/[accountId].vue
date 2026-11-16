@@ -595,6 +595,7 @@ definePageMeta({
 
 
         <!-- Table component with alert on the side -->
+         <div class="trans-alert-comp">
         <div class="trans-table-alerts">
 
             <div>
@@ -625,22 +626,16 @@ definePageMeta({
             </div>
 
 
+        </div>
 
-            <div class="alert-wrapper">
+               <div class="alert-wrapper">
 
 
-
+                    hey
 
             </div>
 
-
-
-
-        </div>
-
-
-
-
+</div>
 
 
 
@@ -1077,6 +1072,14 @@ definePageMeta({
     padding-top: 24px;
 }
 
+.trans-alert-comp{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 16px;
+
+}
+
 .trans-table-alerts {
     flex: 3;
     padding: 24px;
@@ -1084,7 +1087,18 @@ definePageMeta({
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    min-width: 500px;
 
+}
+
+.alert-wrapper{
+       flex: 1;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); 
+    min-width: 350px;
 }
 
 @media (max-width: 640px) {

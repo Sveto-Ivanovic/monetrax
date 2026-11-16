@@ -9,11 +9,14 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!id) return
 
   let accountName = "No Account Name Found"
-  useUserStore.userInfo.accountInformationList.forEach(element => {
+  if(userStore.userInfo){
+     userStore.userInfo.accountInformationList.forEach(element => {
     if(element.accountId && element.name && element.accountId === id ){
       accountName = element.name
     }
   });
+  }
+
 
 
   const labels = useBreadcrumbs()
