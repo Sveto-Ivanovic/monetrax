@@ -1,5 +1,6 @@
 package com.monetrax.monetrax.user.service;
 
+import com.monetrax.monetrax.accounts.service.AccountService;
 import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
 import com.monetrax.monetrax.common.exception.ErrorResponse;
 import com.monetrax.monetrax.user.dto.*;
@@ -44,6 +45,9 @@ public class UserServiceImplTest {
 
     @Mock
     private ApiKeysRepository apiKeysRepository;
+
+    @Mock
+    private AccountService accountService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -101,6 +105,7 @@ public class UserServiceImplTest {
         when(userRepository.findById(userEntityTest.getUserId())).thenReturn(Optional.of(userEntityTest));
         when(userMapper.toUserInformation(userEntityTest)).thenReturn(userInformationTest);
         when(apiKeysRepository.fetchPresentKeys(userEntityTest.getUserId())).thenReturn(new ArrayList<>());
+        when(accountService.getAccounts(userEntityTest.getUserId(), true)).thenReturn(new ArrayList<>());
 
         UserInformationDetailed resUser = userService.fetchUserById(userEntityTest.getUserId());
 

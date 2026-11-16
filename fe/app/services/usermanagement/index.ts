@@ -77,7 +77,9 @@ export function userManagementApi() {
 
         watch(query.data, (data) => {
             const response = data
-            if (typeof data === 'object' && data !== null && "userName" in data) {
+            if (typeof data === 'object' && data !== null && 'userInfo' in response &&
+                'aiApiKeys' in response &&
+                'accountInformationList' in response) {
                 userStore.setUserInfo(response as UserInformationDetailed);
 
             }

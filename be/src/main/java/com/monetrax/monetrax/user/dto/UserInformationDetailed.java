@@ -1,5 +1,7 @@
 package com.monetrax.monetrax.user.dto;
 
+import com.monetrax.monetrax.accounts.dto.AccountInformation;
+import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import jakarta.persistence.GeneratedValue;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,4 +17,5 @@ import java.util.List;
 public class UserInformationDetailed {
     private UserInformation userInfo;
     private List<String> aiApiKeys;
+    private List<AccountInformation> accountInformationList;
 }

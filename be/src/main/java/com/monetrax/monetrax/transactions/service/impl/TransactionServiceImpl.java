@@ -298,6 +298,11 @@ public class TransactionServiceImpl implements TransactionService {
             log.warn("No account found for userId={}, accountId={}", userId, accountId);
             return new NoSuchAccountFound("No such account exists!");
         });
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
+
         log.debug("Fetched user and account successfully: userId={}, accountId={}", userId, accountId);
 
         // method for checking the validity of categories, getting category map categoryUUID - categoryEntity, Set/deduplication of the the categories
@@ -438,21 +443,26 @@ public class TransactionServiceImpl implements TransactionService {
             throw new MissingTransactionUpdatedFieldsException("At least one field needs to be provided.");
         }
 
+        //fetch user and account
+        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
+            log.warn("Transaction update failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: "+ userId);
+        });
+
         //fetch transaction
         TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> {
             log.warn("Transaction update failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
             return new MissingTransactionLikeEntityException("No such transaction found !");
         });
 
-        //fetch user and account
-        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
-            log.warn("Transaction update failed, user not found [userId={}]", userId);
-            return new NoSuchUserExistsException("No user with id: "+ userId);
-        });
         AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
             log.warn("Transaction update failed, account not found [transactionId={}, userId={}]", transactionId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
+
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
 
         // original amounts
         BigDecimal nativeAmountPrevious = transactionEntity.getAmountNative();
@@ -565,6 +575,11 @@ public class TransactionServiceImpl implements TransactionService {
             return new NoSuchAccountFound("No such account exists!");
         });
 
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
+
         // Delete all transaction categories
         List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
         int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
@@ -626,15 +641,20 @@ public class TransactionServiceImpl implements TransactionService {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("AI transaction creation failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: " + userId);
+        });
         // get account and user
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(() -> {
             log.warn("AI transaction creation failed, no account found [userId={}, accountId={}]", userId, accountId);
             return new NoSuchAccountFound("No such account exists!");
         });
-        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("AI transaction creation failed, user not found [userId={}]", userId);
-            return new NoSuchUserExistsException("No user with id: " + userId);
-        });
+
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
         log.debug("Fetched user and account for AI transaction: userId={}, accountId={}, accountCurrency={}",
                 userId, accountId, account.getCurrency());
 

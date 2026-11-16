@@ -1,3 +1,5 @@
+import type { AccountInformation } from "../accounts/types";
+
 export interface LogInResponse{
     userId: string;
     authToken: string;
@@ -28,6 +30,7 @@ export interface UserRegistration {
 export interface UserInformationDetailed {
     userInfo: UserInformation;
     aiApiKeys: string[];
+    accountInformationList: AccountInformation[];
 }
 
 export interface CommonErrorResponse {
@@ -47,10 +50,6 @@ export interface LogInRequest{
     password: string;
 }
 
-export interface UserInformationDetailed{
-    userInfo: UserInformation;
-    aiApiKeys: string[];
-}
 
 export interface UserUpdate {
   userName?: string;

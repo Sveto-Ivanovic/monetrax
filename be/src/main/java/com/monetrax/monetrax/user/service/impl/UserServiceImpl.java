@@ -1,5 +1,7 @@
 package com.monetrax.monetrax.user.service.impl;
 
+import com.monetrax.monetrax.accounts.dto.AccountInformation;
+import com.monetrax.monetrax.accounts.service.AccountService;
 import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
 import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
@@ -27,16 +29,18 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final ApiKeysRepository apiKeysRepository;
+    private final AccountService accountService;
 
     public UserServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            UserMapper userMapper, ApiKeysRepository apiKeysRepository
+            UserMapper userMapper, ApiKeysRepository apiKeysRepository, AccountService accountService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.apiKeysRepository = apiKeysRepository;
+        this.accountService = accountService;
     }
 
     public String hashString(String val){
@@ -49,12 +53,16 @@ public class UserServiceImpl implements UserService {
             log.warn("User fetch failed, user not found [userId={}]", userId);
             return new NoSuchUserExistsException("No user with id: " + userId);
         });
+
+        List<AccountInformation> accountInformationList = accountService.getAccounts(user.getUserId(), true);
+
+
         log.debug("Fetched user [userId={}]", userId);
         UserInformation userInformation = userMapper.toUserInformation(user);
 
         List<String> listOfApiKeys = apiKeysRepository.fetchPresentKeys(userId);
 
-        return UserInformationDetailed.builder().userInfo(userInformation).aiApiKeys(listOfApiKeys).build();
+        return UserInformationDetailed.builder().userInfo(userInformation).aiApiKeys(listOfApiKeys).accountInformationList(accountInformationList).build();
     }
 
     public UserInformation createUser(UserCreation user){
