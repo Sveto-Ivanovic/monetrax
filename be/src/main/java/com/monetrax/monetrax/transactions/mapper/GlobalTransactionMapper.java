@@ -106,7 +106,7 @@ public class GlobalTransactionMapper {
                .map(CategoryEntity::getName)
                .toList();
         return TransactionInformationPart.builder()
-                .amount(transactionEntity.getAmount())
+                .amount(transactionEntity.getAmountNative())
                 .categories(categories)
                 .categoryType(transactionEntity.getCategoryType())
                 .createdAt(transactionEntity.getCreatedAt())

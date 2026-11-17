@@ -1,9 +1,9 @@
 package com.monetrax.monetrax.user.service.impl;
 
-import com.monetrax.monetrax.user.dto.UserCreation;
-import com.monetrax.monetrax.user.dto.UserInformation;
-import com.monetrax.monetrax.user.dto.UserSuccessfulPasswordUpdate;
-import com.monetrax.monetrax.user.dto.UserUpdate;
+import com.monetrax.monetrax.accounts.dto.AccountInformation;
+import com.monetrax.monetrax.accounts.service.AccountService;
+import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
+import com.monetrax.monetrax.user.dto.*;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.EmailAlreadyExistsException;
 import com.monetrax.monetrax.user.exception.NoFieldToUpdateUserExistsException;
@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,29 +28,41 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final ApiKeysRepository apiKeysRepository;
+    private final AccountService accountService;
 
     public UserServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            UserMapper userMapper
+            UserMapper userMapper, ApiKeysRepository apiKeysRepository, AccountService accountService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.apiKeysRepository = apiKeysRepository;
+        this.accountService = accountService;
     }
 
     public String hashString(String val){
         return passwordEncoder.encode(val);
     }
 
-    public UserInformation fetchUserById(UUID userId){
+    public UserInformationDetailed fetchUserById(UUID userId){
         log.debug("Fetching user [userId={}]", userId);
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
             log.warn("User fetch failed, user not found [userId={}]", userId);
             return new NoSuchUserExistsException("No user with id: " + userId);
         });
+
+        List<AccountInformation> accountInformationList = accountService.getAccounts(user.getUserId(), true);
+
+
         log.debug("Fetched user [userId={}]", userId);
-        return userMapper.toUserInformation(user);
+        UserInformation userInformation = userMapper.toUserInformation(user);
+
+        List<String> listOfApiKeys = apiKeysRepository.fetchPresentKeys(userId);
+
+        return UserInformationDetailed.builder().userInfo(userInformation).aiApiKeys(listOfApiKeys).accountInformationList(accountInformationList).build();
     }
 
     public UserInformation createUser(UserCreation user){
@@ -74,7 +87,7 @@ public class UserServiceImpl implements UserService {
                 && userUpdate.getName() == null
                 && userUpdate.getSurname() == null
                 && userUpdate.getUserName() == null
-                && userUpdate.getUserEmail() == null) {
+                ) {
             log.warn("User update rejected, no fields provided [userId={}]", userId);
             throw new NoFieldToUpdateUserExistsException("Nothing to update user with.");
         }
@@ -89,13 +102,6 @@ public class UserServiceImpl implements UserService {
         Optional.ofNullable(userUpdate.getSurname()).ifPresent(user::setSurname);
         Optional.ofNullable(userUpdate.getUserName()).ifPresent(user::setUserName);
         user.setUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC));
-
-        if(userUpdate.getUserEmail() != null && userRepository.existsUserEmail(userUpdate.getUserEmail())) {
-            log.warn("User update rejected, email already exists [userId={}]", userId);
-            throw new EmailAlreadyExistsException("Cannot update user with present email as the email already exists.");
-        }
-
-        Optional.ofNullable(userUpdate.getUserEmail()).ifPresent(user::setUserEmail);
 
         UserEntity  userEntity = userRepository.save(user);
         log.info("User updated [userId={}]", userId);

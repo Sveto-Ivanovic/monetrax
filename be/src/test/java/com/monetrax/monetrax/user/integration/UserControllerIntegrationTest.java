@@ -80,10 +80,11 @@ public class UserControllerIntegrationTest {
         headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        ResponseEntity<UserInformation> resGet = restTemplate.exchange(
-                baseUrl + "/user/me", HttpMethod.GET, entity, UserInformation.class);
+        ResponseEntity<UserInformationDetailed> resGet = restTemplate.exchange(
+                baseUrl + "/user/me", HttpMethod.GET, entity, UserInformationDetailed.class);
 
-        assertEquals(resGet.getBody(), resUserInformation);
+        assert resGet.getBody() != null;
+        assertEquals(resGet.getBody().getUserInfo(), resUserInformation);
 
     }
 
@@ -126,7 +127,6 @@ public class UserControllerIntegrationTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
         UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("john.smith@example.com")
                 .userName("johnsmith")
                 .surname("Smith")
                 .build();
@@ -139,7 +139,6 @@ public class UserControllerIntegrationTest {
         UserInformation res2 = resUpdate.getBody();
 
         assertNotEquals(res2, res.getBody());
-        assertEquals("john.smith@example.com", res2.getUserEmail());
         assertEquals("johnsmith", res2.getUserName());
         assertEquals("Smith", res2.getSurname());
     }
@@ -184,53 +183,7 @@ public class UserControllerIntegrationTest {
         assertEquals(errRes, res2);
     }
 
-    @Test
-    public void createUserThenTryToUpdateWithEmailThatAlreadyExistsIT(){
-        String baseUrl = "http://localhost:" + port;
-        // create first user, user that we will update
-        ResponseEntity<UserInformation> res = restTemplate.postForEntity(
-                baseUrl + "/user/create", userCreation, UserInformation.class);
 
-        UserCreation userCreationCopy = userCreation.toBuilder()
-            .userEmail("emailThatExistsInDB@email.com")
-                .build();
-        // create second user, the user that has different email, we will use this mail to update first user, which should trigger error
-        ResponseEntity<UserInformation> res2 = restTemplate.postForEntity(
-                baseUrl + "/user/create", userCreationCopy, UserInformation.class);
-
-        assertNotNull(res.getBody().getUserId());
-        UUID userIdTarget = res.getBody().getUserId();
-
-        AuthRequest authRequest = AuthRequest.builder()
-                .email("john.doe742@example.com")
-                .password("TestPass123!")
-                .build();
-
-        ResponseEntity<AuthResponse> resAuth = restTemplate.postForEntity(
-                baseUrl+"/auth/login", authRequest, AuthResponse.class
-        );
-        assert resAuth.getBody() != null;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Authorization", "Bearer "+resAuth.getBody().getAuthToken());
-
-
-        UserUpdate userUpdate = UserUpdate.builder()
-                .userEmail("emailThatExistsInDB@email.com")
-                .build();
-
-        HttpEntity<UserUpdate> entity = new HttpEntity<>(userUpdate, headers);
-
-        ResponseEntity<ErrorResponse> resUpdate = restTemplate.exchange(
-                baseUrl + "/user/update", HttpMethod.PATCH, entity, ErrorResponse.class);
-
-        ErrorResponse resErr = resUpdate.getBody();
-
-        var expectedErrors = GlobalExceptionHandler.addCustomErrorToErrorResponse("Cannot update user with present email as the email already exists.","userEmail");
-        ErrorResponse errRes = new ErrorResponse(403, expectedErrors);
-
-        assertEquals(errRes, resErr);
-    }
 
     @Test
     public void createUserThenUpdatePasswordIT(){

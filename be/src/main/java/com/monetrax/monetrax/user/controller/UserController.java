@@ -21,11 +21,11 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/me")
-    public ResponseEntity<UserInformation> getUser(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    public ResponseEntity<UserInformationDetailed> getUser(@AuthenticationPrincipal CustomUserDetails customUserDetails) {
         UUID userId = UUID.fromString(customUserDetails.getUserId());
         log.info("Endpoint called: GET /user/me [userId={}]", userId);
         try {
-            UserInformation response = userService.fetchUserById(userId);
+            UserInformationDetailed response = userService.fetchUserById(userId);
             log.debug("GET /user/me succeeded [userId={}]", userId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

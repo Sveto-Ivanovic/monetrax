@@ -18,11 +18,14 @@ import com.monetrax.monetrax.ai.repository.MessageHistoryRepository;
 import com.monetrax.monetrax.ai.service.AiAPiService;
 import com.monetrax.monetrax.ai.service.impl.AiAPiServiceImpl;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
+import com.monetrax.monetrax.apis.dto.FrankfurterV2Response;
+import com.monetrax.monetrax.apis.service.FrankfurterApiService;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.categories.mapper.CategoryMapper;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
+import com.monetrax.monetrax.categories.service.impl.CategoryServiceImpl;
 import com.monetrax.monetrax.transactions.component.AiComponent;
 import com.monetrax.monetrax.transactions.dto.*;
 import com.monetrax.monetrax.transactions.entity.*;
@@ -40,6 +43,7 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import jdk.jfr.Category;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -75,8 +79,10 @@ public class TransactionServiceImpl implements TransactionService {
     private final AiAPiServiceImpl aiAPiService;
     private final AiComponent aiComponent;
     private final Validator validator;
+    private final CategoryServiceImpl categoryService;
+    private final FrankfurterApiService frankfurterApiService;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService, FrankfurterApiService frankfurterApiService) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -95,6 +101,8 @@ public class TransactionServiceImpl implements TransactionService {
         this.aiAPiService = aiAPiService;
         this.aiComponent = aiComponent;
         this.validator = validator;
+        this.categoryService = categoryService;
+        this.frankfurterApiService = frankfurterApiService;
     }
 
     @AllArgsConstructor
@@ -202,6 +210,7 @@ public class TransactionServiceImpl implements TransactionService {
         log.debug("Fetched account transactions [accountId={}, transactionCount={}]", accountId, transactionEntities.size());
         List<TransactionInformationPart> informationParts;
 
+        List<String> listOfProducts;
         // if we have transactions in the account
         if(!transactionEntities.isEmpty()){
             // get all transaction ids
@@ -247,20 +256,29 @@ public class TransactionServiceImpl implements TransactionService {
                         // use mapper to create the TransactionInformationPart
                         return globalTransactionMapper.fromTransactionEntityToTransactionInformationPart(t, subListOfCategoriesTiedToTransaction);
                     }).toList();
+
+            // git list of all products in the account, i added this for autocomplete for when user wants to type their own bought products
+            listOfProducts = transactionLineItemsRepository.fetchAllTransactionsLineProductsWithIn(allTransactionIds)
+                    .stream().map(TransactionLineItemsEntity::getProductName)
+                    .distinct()
+                    .toList();
         }
         else{
             informationParts=new ArrayList<>();
+            listOfProducts = new ArrayList<>();
         }
 
-        //*************************************************************************************************************************
-        // logic for fetching alerts
-        //*************************************************************************************************************************
+        List<CategoryInformation> categoryInformationList = categoryService.getAllCategories(userId).getCategories();
+
+
 
         AccountInformation accountInformation = accountMapper.fromAccountEntityToAccountInformation(account);
         log.debug("Built account transactions response [accountId={}, userId={}, count={}]", accountId, userId, informationParts.size());
         return ListOfAccountTransactions.builder()
                 .account(accountInformation)
                 .transactions(informationParts)
+                .categoryInformationList(categoryInformationList)
+                .listOfProducts(listOfProducts)
                 .build();
 
 
@@ -280,6 +298,11 @@ public class TransactionServiceImpl implements TransactionService {
             log.warn("No account found for userId={}, accountId={}", userId, accountId);
             return new NoSuchAccountFound("No such account exists!");
         });
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
+
         log.debug("Fetched user and account successfully: userId={}, accountId={}", userId, accountId);
 
         // method for checking the validity of categories, getting category map categoryUUID - categoryEntity, Set/deduplication of the the categories
@@ -293,6 +316,16 @@ public class TransactionServiceImpl implements TransactionService {
         // conversion logic should be implemented bellow
         //************************************************************************************************************************
         BigDecimal amountNative = transactionCreate.getAmount();
+        BigDecimal conversionFactor;
+        if(account.getCurrency().equals(transactionCreate.getCurrency())) {
+            LocalDate localDate = transactionCreate.getCustomCreationDate() == null ? LocalDate.now(ZoneOffset.UTC) : transactionCreate.getCustomCreationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate();
+            FrankfurterV2Response frankfurterV2Response = frankfurterApiService.getConversionFactor(transactionCreate.getCurrency(), account.getCurrency(), localDate);
+            conversionFactor = BigDecimal.valueOf(frankfurterV2Response.getRate());
+
+        } else{
+            conversionFactor = new BigDecimal("1.00");
+        }
+
         //************************************************************************************************************************
 
         if(!categoryKind.equals(CategoryKind.EXPENSE) && !transactionCreate.getLineInformation().isEmpty()){
@@ -306,7 +339,7 @@ public class TransactionServiceImpl implements TransactionService {
                 account,
                 amountNative,
                 categoryKind,
-                new BigDecimal("1.00"));
+                conversionFactor);
 
         TransactionEntity transactionEntitySaved = transactionRepository.save(transactionEntity);
         log.info("Saved transaction with id={} for accountId={}", transactionEntitySaved.getTransactionId(), accountId);
@@ -410,21 +443,26 @@ public class TransactionServiceImpl implements TransactionService {
             throw new MissingTransactionUpdatedFieldsException("At least one field needs to be provided.");
         }
 
+        //fetch user and account
+        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
+            log.warn("Transaction update failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: "+ userId);
+        });
+
         //fetch transaction
         TransactionEntity transactionEntity = transactionRepository.fetchUserTransaction(transactionId, userId).orElseThrow(()-> {
             log.warn("Transaction update failed, transaction not found [transactionId={}, userId={}]", transactionId, userId);
             return new MissingTransactionLikeEntityException("No such transaction found !");
         });
 
-        //fetch user and account
-        UserEntity user = userRepository.findById(userId).orElseThrow(()-> {
-            log.warn("Transaction update failed, user not found [userId={}]", userId);
-            return new NoSuchUserExistsException("No user with id: "+ userId);
-        });
         AccountEntity account = accountRepository.getAccount(userId, transactionEntity.getAccount().getAccountId()).orElseThrow(()->{
             log.warn("Transaction update failed, account not found [transactionId={}, userId={}]", transactionId, userId);
             return new NoSuchAccountFound("No such account exists!");
         });
+
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
 
         // original amounts
         BigDecimal nativeAmountPrevious = transactionEntity.getAmountNative();
@@ -537,6 +575,11 @@ public class TransactionServiceImpl implements TransactionService {
             return new NoSuchAccountFound("No such account exists!");
         });
 
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
+
         // Delete all transaction categories
         List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIds(transactionId);
         int num_of_deleted = transactionCategoriesRepository.deleteAllTransactionCategoriesByTransactionId(transactionId);
@@ -598,15 +641,20 @@ public class TransactionServiceImpl implements TransactionService {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
+            log.warn("AI transaction creation failed, user not found [userId={}]", userId);
+            return new NoSuchUserExistsException("No user with id: " + userId);
+        });
         // get account and user
         AccountEntity account = accountRepository.getAccount(userId, accountId).orElseThrow(() -> {
             log.warn("AI transaction creation failed, no account found [userId={}, accountId={}]", userId, accountId);
             return new NoSuchAccountFound("No such account exists!");
         });
-        UserEntity user = userRepository.findById(userId).orElseThrow(() -> {
-            log.warn("AI transaction creation failed, user not found [userId={}]", userId);
-            return new NoSuchUserExistsException("No user with id: " + userId);
-        });
+
+        if(!account.isActive()){
+            throw new IllegalStateException("Account is archived, please unarchive it.");
+        }
+
         log.debug("Fetched user and account for AI transaction: userId={}, accountId={}, accountCurrency={}",
                 userId, accountId, account.getCurrency());
 

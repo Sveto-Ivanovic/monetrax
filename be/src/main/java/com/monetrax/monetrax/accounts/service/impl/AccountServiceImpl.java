@@ -9,6 +9,7 @@ import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.accounts.mapper.AccountMapper;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.accounts.service.AccountService;
+import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import com.monetrax.monetrax.user.exception.NoSuchUserExistsException;
 import com.monetrax.monetrax.user.repository.UserRepository;
@@ -77,6 +78,10 @@ public class AccountServiceImpl implements AccountService {
             log.warn("Cannot create account, user not found: userId={}", userId);
             return new NoSuchUserExistsException("No user with id: "+ userId);
         });
+        if(accountCreate.getCurrency() != "EUR"){
+            throw new InvalidInputException("For now accounts with EUR are only allowed");
+        }
+
         AccountEntity toCreate = accountMapper.fromAccountCreateToAccountEntity(accountCreate, user);
         AccountEntity created = accountRepository.save(toCreate);
         log.info("Account created: userId={}, accountId={}", userId, created.getAccountId());

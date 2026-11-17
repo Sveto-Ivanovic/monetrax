@@ -1,6 +1,9 @@
 package com.monetrax.monetrax.transactions.repository;
 
 import com.monetrax.monetrax.analytics.dto.GroupByTypes;
+import com.monetrax.monetrax.analytics.dto.MonthlyBalance;
+import com.monetrax.monetrax.analytics.dto.MonthlyExpenses;
+import com.monetrax.monetrax.analytics.dto.MonthlyIncome;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
@@ -9,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Pageable;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -31,4 +35,25 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
 
     @Query("select t from TransactionEntity t join fetch t.user join fetch t.account where t.transactionId in ?1")
     public List<TransactionEntity> fetchTransactionsForScheduler(List<UUID> transactionIds);
+
+    @Query("""
+    select new com.monetrax.monetrax.analytics.dto.MonthlyBalance(
+           sum(t.amount),
+           'EUR',
+           format(t.createdAt as 'yyyy-MM'))
+    from TransactionEntity t
+    where t.account.accountId = ?1
+      and t.createdAt >= ?2
+      and t.categoryType in ?3
+    group by format(t.createdAt as 'yyyy-MM')
+    order by format(t.createdAt as 'yyyy-MM') asc
+    """)
+    List<MonthlyBalance> findMonthlyAmountsByMonth(UUID id, OffsetDateTime from, List<CategoryKind> categoryKindList);
+
+    @Query("select t from TransactionEntity t where t.user.userId = ?1 order by t.createdAt desc")
+    List<TransactionEntity> findRecentTransactions(UUID userId, Pageable pageable);
+
+    @Query("select t from TransactionEntity t join fetch t.account where t.user.userId = ?1 and t.createdAt >= ?2 and t.createdAt <= ?3")
+    List<TransactionEntity> findThisMonthsTransactions(UUID userId, OffsetDateTime from, OffsetDateTime to);
+
 }
