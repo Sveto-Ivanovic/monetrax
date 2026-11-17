@@ -10,6 +10,9 @@ import type { DropdownMenuItem, TableColumn, ContextMenuItem, } from '@nuxt/ui'
 import type { TableRow } from '@nuxt/ui'
 import { getTransactionColumns, type ColTypes } from '~/utilis/tables/transactionColumns'
 import { getPaginationRowModel } from '@tanstack/vue-table'
+import AlertComponent from '~/components/alerts/AlertComponent.vue'
+import type { AlertInformation } from '~/services/alerts/types'
+
 
 const route = useRoute()
 
@@ -442,6 +445,23 @@ const pagination = ref({
 
 
 
+const alerts = computed<{
+    alertsSorted: AlertInformation[],
+    numBreach: number
+}>(() => {
+    const breachedAlertsCount = accountTransactions.alerts.filter(alert => alert.breached).length;
+
+    const sorte = [...accountTransactions.alerts].sort(
+        (a, b) => Number(b.breached) - Number(a.breached)
+    );
+
+    return {
+        alertsSorted: sorte,
+        numBreach: breachedAlertsCount
+    }
+
+})
+
 
 definePageMeta({
     middleware: ['require-user-info', 'account-breadcrumbs'],
@@ -595,47 +615,65 @@ definePageMeta({
 
 
         <!-- Table component with alert on the side -->
-         <div class="trans-alert-comp">
-        <div class="trans-table-alerts">
+        <div class="trans-alert-comp">
+            <div class="trans-table-alerts">
 
-            <div>
-                <div class="flex px-4 py-3.5 border-b border-accented gap-1">
-                    <UInput v-model="globalFilter" class="max-w-sm" placeholder="Filter..." />
+                <div>
+                    <div class="flex px-4 py-3.5 border-b border-accented gap-1">
+                        <UInput v-model="globalFilter" class="max-w-sm" placeholder="Filter..." />
 
-                    <UIcon name="i-lucide-info" class="size-5 text-muted cursor-help"
-                        title="If you want to target just specific category enter its name and add * at the end of it" />
+                        <UIcon name="i-lucide-info" class="size-5 text-muted cursor-help"
+                            title="If you want to target just specific category enter its name and add * at the end of it" />
+                    </div>
+
+                    <UContextMenu :items="items">
+                        <UTable sticky :data="tableTransactions" :columns="columns" class="flex-1" ref="table"
+                            :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
+                            v-model:pagination="pagination" :ui="{ root: 'min-h-[770px]' }"
+                            v-model:global-filter="globalFilter" @contextmenu="onContextmenu">
+                            <template #expanded="{ row }">
+                                <pre>{{ row.original }}</pre>
+                            </template>
+                        </UTable>
+                    </UContextMenu>
+
+                    <div class="flex justify-end border-t border-default pt-4 px-4">
+                        <UPagination :page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
+                            :items-per-page="table?.tableApi?.getState().pagination.pageSize"
+                            :total="table?.tableApi?.getFilteredRowModel().rows.length"
+                            @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)" />
+                    </div>
                 </div>
 
-                <UContextMenu :items="items">
-                    <UTable sticky :data="tableTransactions" :columns="columns" class="flex-1" ref="table"
-                        :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
-                        v-model:pagination="pagination" :ui="{ root: 'min-h-[770px]' }"
-                        v-model:global-filter="globalFilter" @contextmenu="onContextmenu">
-                        <template #expanded="{ row }">
-                            <pre>{{ row.original }}</pre>
-                        </template>
-                    </UTable>
-                </UContextMenu>
 
-                <div class="flex justify-end border-t border-default pt-4 px-4">
-                    <UPagination :page="(table?.tableApi?.getState().pagination.pageIndex || 0) + 1"
-                        :items-per-page="table?.tableApi?.getState().pagination.pageSize"
-                        :total="table?.tableApi?.getFilteredRowModel().rows.length"
-                        @update:page="(p) => table?.tableApi?.setPageIndex(p - 1)" />
-                </div>
             </div>
 
+            <div class="alert-wrapper">
+                <div class="alert-panel-header">
+                    <span class="alert-panel-title">Alerts</span>
+
+                    <div>
+                        <div v-if="alerts.numBreach > 0">
+                          <span class="breach-span">Num. breaches</span>  
+                            <span class="alert-panel-red">{{ alerts.numBreach }}</span>
+                        </div>
+                        <div>
+                               <span class="alert-span">Num. alerts</span>  
+                            <span class="alert-panel-count">{{ accountTransactions.alerts.length }}</span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="alert-list">
+                    <div v-for="value in alerts.alertsSorted" :key="value.alertId"
+                        :class="value.breached ? 'alert-border-breached' : 'alert-border-normal'">
+                        <AlertComponent :alert-information="value" :currency="accountTransactions.account.currency" />
+                    </div>
+                </div>
+            </div>
 
         </div>
-
-               <div class="alert-wrapper">
-
-
-                    hey
-
-            </div>
-
-</div>
 
 
 
@@ -1072,7 +1110,7 @@ definePageMeta({
     padding-top: 24px;
 }
 
-.trans-alert-comp{
+.trans-alert-comp {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -1087,18 +1125,108 @@ definePageMeta({
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-    min-width: 500px;
+    min-width: 400px;
 
 }
 
-.alert-wrapper{
-       flex: 1;
+.alert-wrapper {
+    flex: 1;
     padding: 24px;
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); 
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     min-width: 350px;
+    gap: 12px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 0;
+    overflow: hidden;
+}
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px 12px 16px 16px;
+    max-height: 830px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.alert-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eef0f3;
+}
+
+.alert-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.alert-panel-red {
+    font-size: 12px;
+    font-weight: 600;
+    color: #86042b;
+    background: #f8f2f3;
+    padding: 2px 10px;
+    border-radius: 999px;
+}
+
+.alert-panel-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 10px;
+    border-radius: 999px;
+}
+
+
+.alert-border-normal {
+    border: 1px solid #00347e;
+    padding: 8px;
+    border-radius: 8px;
+
+
+}
+
+.alert-border-breached {
+
+    border: 2px solid #6b0400;
+    background-color: #fff6f6;
+    padding: 8px;
+    border-radius: 8px;
+
+}
+
+.breach-span {
+  color: #dc2626;
+  background-color: #fee2e2;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.alert-span {
+  color: #2563eb;
+  background-color: #dbeafe;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {

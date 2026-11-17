@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { AlertConditionInformation } from '~/services/alerts/types';
 import { useElementSize } from '@vueuse/core'
+import { formatCurrency } from '~/utilis/formaters/balanceFormater';
 
 const props = defineProps<{
   condition: AlertConditionInformation,
@@ -299,7 +300,7 @@ const divParams = computed(() => {
         >
 
           <div class="bar-tooltip">
-            <div>Amount: {{ item.val }}</div>
+            <div>Amount: {{ formatCurrency(item.val, props.currency) }}</div>
             <div>Type: {{ item.color === 'blue' ? 'Limit Value' : 'Current Value' }}</div>
           </div>
 
@@ -319,7 +320,7 @@ const divParams = computed(() => {
           </span>
 
           <span class="category-amount">
-            {{ props.amount }}
+            {{ formatCurrency(props.amount, props.currency) }}
           </span>
         </span>
 

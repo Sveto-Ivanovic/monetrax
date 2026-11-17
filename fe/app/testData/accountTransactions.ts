@@ -64,8 +64,8 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
           { conditionId: 'cd000001-0000-4000-8000-000000000002', categoryId: 'c0000001-0000-4000-8000-000000000005', categoryName: 'Dining out', ruleType: 'LESS_OR_EQUAL', limitValueLowOrEqual: null, limitValueHigh: 50 },
         ],
         alertStates: [
-          { categoryId: 'c0000001-0000-4000-8000-000000000003', categoryName: 'Groceries', amount: 54.8, numOfTransactions: 1, avgPerTransaction: 54.8 },
-          { categoryId: 'c0000001-0000-4000-8000-000000000005', categoryName: 'Dining out', amount: 23.9, numOfTransactions: 1, avgPerTransaction: 23.9 },
+          { categoryId: 'c0000001-0000-4000-8000-000000000003', categoryKind: 'EXPENSE', categoryName: 'Groceries', amount: 54.8, numOfTransactions: 1, avgPerTransaction: 54.8 },
+          { categoryId: 'c0000001-0000-4000-8000-000000000005', categoryKind: 'EXPENSE',categoryName: 'Dining out', amount: 23.9, numOfTransactions: 1, avgPerTransaction: 23.9 },
         ],
         breached: false,
         active: true,
@@ -80,7 +80,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
           { conditionId: 'cd000001-0000-4000-8000-000000000003', categoryId: 'c0000001-0000-4000-8000-000000000006', categoryName: 'Entertainment', ruleType: 'LESS', limitValueLowOrEqual: null, limitValueHigh: 10 },
         ],
         alertStates: [
-          { categoryId: 'c0000001-0000-4000-8000-000000000006', categoryName: 'Entertainment', amount: 36.89, numOfTransactions: 2, avgPerTransaction: 18.45 },
+          { categoryId: 'c0000001-0000-4000-8000-000000000006',categoryKind: 'EXPENSE', categoryName: 'Entertainment', amount: 36.89, numOfTransactions: 2, avgPerTransaction: 18.45 },
         ],
         breached: true,
         active: true,
@@ -95,7 +95,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
           { conditionId: 'cd000003-0000-4000-8000-000000000001', categoryId: 'c0000003-0000-4000-8000-000000000002', categoryName: 'Dining out', ruleType: 'BETWEEN', limitValueLowOrEqual: 50, limitValueHigh: 150 },
         ],
         alertStates: [
-          { categoryId: 'c0000003-0000-4000-8000-000000000002', categoryName: 'Dining out', amount: 75.75, numOfTransactions: 2, avgPerTransaction: 37.88 },
+          { categoryId: 'c0000003-0000-4000-8000-000000000002',categoryKind: 'EXPENSE', categoryName: 'Dining out', amount: 75.75, numOfTransactions: 2, avgPerTransaction: 37.88 },
         ],
         breached: false,
         active: true,
@@ -110,7 +110,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
           { conditionId: 'cd000003-0000-4000-8000-000000000002', categoryId: 'c0000003-0000-4000-8000-000000000001', categoryName: 'Travel', ruleType: 'LESS', limitValueLowOrEqual: null, limitValueHigh: 500 },
         ],
         alertStates: [
-          { categoryId: 'c0000003-0000-4000-8000-000000000001', categoryName: 'Travel', amount: 601.99, numOfTransactions: 2, avgPerTransaction: 301.0 },
+          { categoryId: 'c0000003-0000-4000-8000-000000000001', categoryKind: 'EXPENSE',categoryName: 'Travel', amount: 601.99, numOfTransactions: 2, avgPerTransaction: 301.0 },
         ],
         breached: true,
         active: true,
@@ -126,7 +126,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
           { conditionId: 'cd000003-0000-4000-8000-000000000004', categoryId: 'c0000003-0000-4000-8000-000000000003', categoryName: 'Transport', ruleType: 'GREATER', limitValueLowOrEqual: 100, limitValueHigh: null },
         ],
         alertStates: [
-          { categoryId: 'c0000003-0000-4000-8000-000000000003', categoryName: 'Transport', amount: 189.99, numOfTransactions: 1, avgPerTransaction: 189.99 },
+          { categoryId: 'c0000003-0000-4000-8000-000000000003', categoryKind: 'EXPENSE', categoryName: 'Transport', amount: 189.99, numOfTransactions: 1, avgPerTransaction: 189.99 },
         ],
         breached: true,
         active: false,

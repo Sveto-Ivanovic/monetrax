@@ -6,11 +6,13 @@ import AlertConditionBar from './AlertConditionBar.vue'
 
 
 interface Props {
-    alertInformation: AlertInformation | null
+    alertInformation: AlertInformation | null,
+    currency: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    alertInformation: null
+    alertInformation: null,
+    currency: 'EUR'
 })
 
 
@@ -39,7 +41,7 @@ const items = ref<DropdownMenuItem[][]>([
 
 
 function amountFor(categoryId: string): number {
-  const state = props.alertInformation.alertStates.find(s => s.categoryId === categoryId)
+  const state = props.alertInformation?.alertStates.find(s => s.categoryId === categoryId)
   return state ? state.amount : 0
 }
 
@@ -91,13 +93,14 @@ function amountFor(categoryId: string): number {
             </div>
 
             <div class="conditions-list">
-            <AlertConditionBar
+              
+              <AlertConditionBar
                 v-for="filter in alertInformation.filters"
                 :key="filter.conditionId"
                 :condition="filter"
                 :amount="amountFor(filter.categoryId)"
-                :currency="currency"
-            />
+                :currency="props.currency"
+              />
             </div>
 
 
