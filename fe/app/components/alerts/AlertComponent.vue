@@ -38,7 +38,10 @@ const items = ref<DropdownMenuItem[][]>([
 ])
 
 
-
+function amountFor(categoryId: string): number {
+  const state = props.alertInformation.alertStates.find(s => s.categoryId === categoryId)
+  return state ? state.amount : 0
+}
 
 
 </script>
@@ -88,7 +91,7 @@ const items = ref<DropdownMenuItem[][]>([
             </div>
 
             <div class="conditions-list">
-            <Comp1
+            <AlertConditionBar
                 v-for="filter in alertInformation.filters"
                 :key="filter.conditionId"
                 :condition="filter"
