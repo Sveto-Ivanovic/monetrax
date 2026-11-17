@@ -60,8 +60,8 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
         dateFrom: '2026-11-01',
         dateTo: '2026-11-30',
         filters: [
-          { conditionId: 'cd000001-0000-4000-8000-000000000001', categoryId: 'c0000001-0000-4000-8000-000000000003', categoryName: 'Groceries', ruleType: 'LESS_OR_EQUAL', limitValueLowOrEqual: 150, limitValueHigh: null },
-          { conditionId: 'cd000001-0000-4000-8000-000000000002', categoryId: 'c0000001-0000-4000-8000-000000000005', categoryName: 'Dining out', ruleType: 'LESS_OR_EQUAL', limitValueLowOrEqual: 50, limitValueHigh: null },
+          { conditionId: 'cd000001-0000-4000-8000-000000000001', categoryId: 'c0000001-0000-4000-8000-000000000003', categoryName: 'Groceries', ruleType: 'LESS_OR_EQUAL', limitValueLowOrEqual: null, limitValueHigh: 150 },
+          { conditionId: 'cd000001-0000-4000-8000-000000000002', categoryId: 'c0000001-0000-4000-8000-000000000005', categoryName: 'Dining out', ruleType: 'LESS_OR_EQUAL', limitValueLowOrEqual: null, limitValueHigh: 50 },
         ],
         alertStates: [
           { categoryId: 'c0000001-0000-4000-8000-000000000003', categoryName: 'Groceries', amount: 54.8, numOfTransactions: 1, avgPerTransaction: 54.8 },
@@ -77,7 +77,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
         dateFrom: '2026-11-01',
         dateTo: '2026-11-30',
         filters: [
-          { conditionId: 'cd000001-0000-4000-8000-000000000003', categoryId: 'c0000001-0000-4000-8000-000000000006', categoryName: 'Entertainment', ruleType: 'LESS', limitValueLowOrEqual: 10, limitValueHigh: null },
+          { conditionId: 'cd000001-0000-4000-8000-000000000003', categoryId: 'c0000001-0000-4000-8000-000000000006', categoryName: 'Entertainment', ruleType: 'LESS', limitValueLowOrEqual: null, limitValueHigh: 10 },
         ],
         alertStates: [
           { categoryId: 'c0000001-0000-4000-8000-000000000006', categoryName: 'Entertainment', amount: 36.89, numOfTransactions: 2, avgPerTransaction: 18.45 },
@@ -107,7 +107,7 @@ export const accountTransactionsExamples: ListOfAccountTransactions =
         dateFrom: '2026-10-01',
         dateTo: '2026-10-31',
         filters: [
-          { conditionId: 'cd000003-0000-4000-8000-000000000002', categoryId: 'c0000003-0000-4000-8000-000000000001', categoryName: 'Travel', ruleType: 'LESS', limitValueLowOrEqual: 500, limitValueHigh: null },
+          { conditionId: 'cd000003-0000-4000-8000-000000000002', categoryId: 'c0000003-0000-4000-8000-000000000001', categoryName: 'Travel', ruleType: 'LESS', limitValueLowOrEqual: null, limitValueHigh: 500 },
         ],
         alertStates: [
           { categoryId: 'c0000003-0000-4000-8000-000000000001', categoryName: 'Travel', amount: 601.99, numOfTransactions: 2, avgPerTransaction: 301.0 },
