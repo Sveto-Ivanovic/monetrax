@@ -2,6 +2,7 @@
 import type { AlertInformation } from '~/services/alerts/types';
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { label } from '@unovis/ts/components/axis/style';
+import AlertConditionBar from './AlertConditionBar.vue'
 
 
 interface Props {
@@ -86,16 +87,15 @@ const items = ref<DropdownMenuItem[][]>([
 
             </div>
 
-
-            <div>
-
-
-
-                
+            <div class="conditions-list">
+            <Comp1
+                v-for="filter in alertInformation.filters"
+                :key="filter.conditionId"
+                :condition="filter"
+                :amount="amountFor(filter.categoryId)"
+                :currency="currency"
+            />
             </div>
-
-
-
 
 
         </div>
@@ -108,4 +108,138 @@ const items = ref<DropdownMenuItem[][]>([
     </div>
 </template>
 
-<style scoped></style>
+
+<style scoped>
+
+.alert-component {
+  width: 100%;
+  font-family: sans-serif;
+}
+
+.active-alert-wrapper,
+.breached-alert-wrapper {
+  padding: 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 10px;
+}
+
+.breached-alert-wrapper {
+  border-color: #c62828;
+}
+
+.alert-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alert-name-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.right-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-breached {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.alert-breached.is-active {
+  color: #2e7d32;
+}
+
+.alert-breached.is-breached {
+  color: #c62828;
+}
+
+.seperator-dot {
+  color: #999;
+}
+
+.conditions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.alert-menu-options {
+  position: relative;
+}
+
+.alert-menu-button {
+  padding: 4px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.alert-menu-button:hover {
+  background: #f3f3f3;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 11;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.menu-item {
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.85rem;
+  color: #222;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: #f3f3f3;
+}
+
+.alert-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #777;
+}
+
+
+
+
+.no-alert {
+  color: #777;
+  padding: 16px;
+}
+
+</style>

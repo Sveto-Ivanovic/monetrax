@@ -9,8 +9,8 @@ const props = defineProps<{
 }>()
 
 
-const low = computed(() => props.condition.limitValueLowOrEqual ?? 0)
-const high = computed(() => props.condition.limitValueHigh ?? 0)
+const low = computed(() => props.condition.limitValueLowOrEqual || 0)
+const high = computed(() => props.condition.limitValueHigh || 0)
 
 const minimum = computed(() => {
     if(props.condition.ruleType==="GREATER_OR_EQUAL" || props.condition.ruleType==="EQUAL" || props.condition.ruleType==='GREATER' || props.condition.ruleType==='BETWEEN'){
