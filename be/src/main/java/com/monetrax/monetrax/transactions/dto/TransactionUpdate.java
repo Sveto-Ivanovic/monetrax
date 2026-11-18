@@ -21,8 +21,7 @@ public class TransactionUpdate {
 
     @Size(min = 4, max = 100, message = "Size of the name must be between 4 and 100 characters.")
     private String name;
-
-    @Size(min = 4, max = 250, message = "Size of the name must be between 4 and 100 characters.")
+    
     private String description;
 
     @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
