@@ -12,7 +12,7 @@ import { getTransactionColumns, type ColTypes } from '~/utilis/tables/transactio
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import AlertComponent from '~/components/alerts/AlertComponent.vue'
 import type { AlertInformation } from '~/services/alerts/types'
-
+import CreateTransactionPopUp from '~/components/transactions/CreateTransactionPopUp.vue'
 
 const route = useRoute()
 
@@ -502,9 +502,9 @@ definePageMeta({
 
             <div class="account-info-buttons">
                 <div class="acc-inf-creation-buttons">
-                    <UButton
-                        :class="accountTransactions.account.active ? 'acc-transaction-active' : 'acc-transaction-disabled'"
-                        @click="openTransactionModal()">+ Create Transaction</UButton>
+               
+                    <CreateTransactionPopUp :disabled="!accountTransactions.account.active" :categories="accountTransactions.categoryInformationList.map((x) => { return { categoryId: x.categoryId, name: x.name } })
+                        "></CreateTransactionPopUp>
                     <UButton :class="accountTransactions.account.active ? 'acc-alert-active' : 'acc-alert-disabled'"
                         @click="openAlertModal()">+ Add Alert</UButton>
                 </div>
@@ -654,11 +654,11 @@ definePageMeta({
 
                     <div>
                         <div v-if="alerts.numBreach > 0">
-                          <span class="breach-span">Num. breaches</span>  
+                            <span class="breach-span">Num. breaches</span>
                             <span class="alert-panel-red">{{ alerts.numBreach }}</span>
                         </div>
                         <div>
-                               <span class="alert-span">Num. alerts</span>  
+                            <span class="alert-span">Num. alerts</span>
                             <span class="alert-panel-count">{{ accountTransactions.alerts.length }}</span>
                         </div>
                     </div>
@@ -1212,21 +1212,21 @@ definePageMeta({
 }
 
 .breach-span {
-  color: #dc2626;
-  background-color: #fee2e2;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+    color: #dc2626;
+    background-color: #fee2e2;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .alert-span {
-  color: #2563eb;
-  background-color: #dbeafe;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+    color: #2563eb;
+    background-color: #dbeafe;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 @media (max-width: 640px) {

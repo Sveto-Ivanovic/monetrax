@@ -2,180 +2,33 @@
 import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { CalendarDate, Time, now } from '@internationalized/date';
-
+import { itemsCurrency as itemsCurrency1 } from '~/components/data/currencies'
 const inputDate = useTemplateRef('inputDate');
+const uuid = () => crypto.randomUUID();
 
-const itemsCurrency = [
-  // Europe
-  'EUR',
-  'GBP',
-  'CHF',
-  'ALL',
-  'BAM',
-  'RSD',
-  'MKD',
-  'NOK',
-  'SEK',
-  'DKK',
-  'ISK',
-  'PLN',
-  'CZK',
-  'HUF',
-  'RON',
-  'MDL',
-  'UAH',
-  'BYN',
-  'RUB',
-  'TRY',
-  'GEL',
-  'AMD',
-  'AZN',
-  'GIP',
-  'XPF',
 
-  // Americas
-  'USD',
-  'CAD',
-  'MXN',
-  'BRL',
-  'ARS',
-  'CLP',
-  'COP',
-  'PEN',
-  'UYU',
-  'PYG',
-  'BOB',
-  'VES',
-  'GYD',
-  'SRD',
-  'JMD',
-  'TTD',
-  'BBD',
-  'BSD',
-  'BZD',
-  'BMD',
-  'AWG',
-  'ANG',
-  'XCD',
-  'DOP',
-  'CRC',
-  'GTQ',
-  'HNL',
-  'NIO',
-  'PAB',
-  'SVC',
-  'HTG',
-  'CUP',
-  'KYD',
-  'FKP',
+interface Category {
+  categoryId: string;
+  name: string;
+}
 
-  // Asia
-  'CNY',
-  'JPY',
-  'KRW',
-  'KPW',
-  'INR',
-  'PKR',
-  'BDT',
-  'LKR',
-  'NPR',
-  'BTN',
-  'MVR',
-  'AFN',
-  'KZT',
-  'UZS',
-  'KGS',
-  'TJS',
-  'TMT',
-  'MNT',
-  'THB',
-  'VND',
-  'IDR',
-  'MYR',
-  'SGD',
-  'PHP',
-  'BND',
-  'KHR',
-  'LAK',
-  'MMK',
-  'TWD',
-  'HKD',
-  'MOP',
-  'AED',
-  'SAR',
-  'QAR',
-  'KWD',
-  'BHD',
-  'OMR',
-  'YER',
-  'ILS',
-  'JOD',
-  'IQD',
-  'IRR',
-  'LBP',
-  'SYP',
-
-  // Africa and Oceania
-  'DZD',
-  'MAD',
-  'TND',
-  'EGP',
-  'LYD',
-  'SDG',
-  'ETB',
-  'ERN',
-  'KES',
-  'UGX',
-  'TZS',
-  'RWF',
-  'BIF',
-  'SOS',
-  'DJF',
-  'NGN',
-  'GHS',
-  'GMD',
-  'GNF',
-  'SLE',
-  'LRD',
-  'XOF',
-  'XAF',
-  'CDF',
-  'AOA',
-  'ZMW',
-  'ZWG',
-  'BWP',
-  'NAD',
-  'LSL',
-  'SZL',
-  'ZAR',
-  'MUR',
-  'SCR',
-  'MGA',
-  'MWK',
-  'MZN',
-  'PGK',
-  'FJD',
-  'WST',
-];
+const props = withDefaults(
+  defineProps<{
+    categories?: Category[];
+    disabled: boolean;
+  }>(),
+  {
+    categories: () => [
+      { categoryId: '1', name: 'Category 1' },
+      { categoryId: '2', name: 'Category 2' },
+      { categoryId: '3', name: 'Category 3' },
+    ],
+    disabled: false
+  }
+);
 
 const selectedTimezone = 'UTC';
 const yesterday = now(selectedTimezone).subtract({ days: 1 });
-const props = {
-  categories: [
-    {
-      categoryId: '1',
-      name: 'Category 1',
-    },
-    {
-      categoryId: '2',
-      name: 'Category 2',
-    },
-    {
-      categoryId: '3',
-      name: 'Category 3',
-    },
-  ],
-};
 
 const productLineSchema = v.object({
   Id: v.string(),
@@ -248,32 +101,24 @@ const schema = v.object({
 // put label key in multi select to be name
 
 type Schema = v.InferOutput<typeof schema>;
-
-const state = reactive<Schema>({
+const state = reactive({
   name: '',
   description: '',
   currency: 'EUR',
   amount: 0.01,
-  customCreationDate: new CalendarDate(
-    yesterday.year,
-    yesterday.month,
-    yesterday.day
-  ),
-  customCreationTime: new Time(12, 0),
+customCreationDate: markRaw(new CalendarDate(yesterday.year, yesterday.month, yesterday.day)),
+customCreationTime: markRaw(new Time(12, 0)),
   categories: [],
-
   additionalInfo: [],
   lineInformation: [],
-
   recurrenceNum: 1,
   maxNumOfOccurrencesAllowed: 1,
   ruleType: 'DAY',
-});
+}) as Schema
 
 function addAdditionalInfo() {
-  const uuid = () => crypto.randomUUID();
   state.additionalInfo.push({
-    Id: uuid,
+    Id: uuid(),
     kind: 'ADDITION',
     label: '',
     amount: 0.01,
@@ -281,9 +126,8 @@ function addAdditionalInfo() {
 }
 
 function addProduct() {
-  const uuid = () => crypto.randomUUID();
   state.lineInformation.push({
-    Id: uuid,
+    Id: uuid(),
     productName: '',
     amount: 0.01,
   });
@@ -293,17 +137,62 @@ function removeAdditionalInfo(item: Schema['additionalInfo'][number]) {
   state.additionalInfo = state.additionalInfo.filter((i) => i.Id !== item.Id);
 }
 function duplicateAdditionalInfo(item: Schema['additionalInfo'][number]) {
-  state.additionalInfo.push({ ...item, Id: crypto.randomUUID() });
+  state.additionalInfo.push({ ...item, Id: uuid() });
 }
 
 function removeProduct(item: Schema['lineInformation'][number]) {
   state.lineInformation = state.lineInformation.filter((i) => i.Id !== item.Id);
 }
 function duplicateProduct(item: Schema['lineInformation'][number]) {
-  state.lineInformation.push({ ...item, Id: crypto.randomUUID() });
+  state.lineInformation.push({ ...item, Id: uuid() });
 }
 
+const computeNetProduct = computed(() => {
+  const val = state.lineInformation.reduce((x, item) => x + item.amount, 0);
+
+  return val;
+});
+
+const computeAdditionalInfo = computed(() => {
+  const val = state.additionalInfo.reduce((x, item) => x + item.amount, 0);
+
+  return val;
+});
+
+const copiedInfo = ref(false);
+let timerInfo: ReturnType<typeof setTimeout> | undefined;
+
+const copyInfo = async () => {
+  try {
+    await navigator.clipboard.writeText(String(computeAdditionalInfo.value));
+    copiedInfo.value = true;
+    clearTimeout(timerInfo);
+    timerInfo = setTimeout(() => (copiedInfo.value = false), 1200);
+  } catch (e) {
+    console.error('Copy failed', e);
+  }
+};
+
+onBeforeUnmount(() => clearTimeout(timerInfo));
+
+const copiedProduct = ref(false);
+let timerProduct: ReturnType<typeof setTimeout> | undefined;
+
+const copyProduct = async () => {
+  try {
+    await navigator.clipboard.writeText(String(computeNetProduct.value));
+    copiedProduct.value = true;
+    clearTimeout(timerProduct);
+    timerProduct = setTimeout(() => (copiedProduct.value = false), 1200);
+  } catch (e) {
+    console.error('Copy failed', e);
+  }
+};
+
+onBeforeUnmount(() => clearTimeout(timerProduct));
+
 const checkboxValue = ref(false);
+const checkboxValueRecurring = ref(false);
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   console.log(event.data);
@@ -311,32 +200,26 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-  <UModal>
-    <UButton label="Open" color="neutral" variant="subtle" />
+  <UModal :ui="{ content: 'sm:max-w-3xl' }">
+    <UButton label="Open" :class="!props.disabled ? 'acc-transaction-active' : 'acc-transaction-disabled'">+ Create
+      Transaction</UButton>
 
-    <template #content>
+    <template #content="{ close }">
       <div class="form-wrapper">
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-4"
-          @submit="onSubmit"
-        >
+        <div class="form-creation-header">
+          <h2 class="form-title">Create Transaction</h2>
+
+          <UButton icon="i-lucide-x" color="neutral" variant="ghost" size="sm" aria-label="Close" @click="close" />
+        </div>
+
+        <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <UFormField label="Transaction Name" name="name">
-            <UInput
-              v-model="state.name"
-              class="w-full"
-              placeholder="Weekly Groceries"
-            />
+            <UInput v-model="state.name" class="w-full" placeholder="Weekly Groceries" />
           </UFormField>
 
           <UFormField label="Description" name="description">
-            <UTextarea
-              v-model="state.description"
-              class="w-full"
-              :rows="3"
-              placeholder="What is this transaction used for?"
-            />
+            <UTextarea v-model="state.description" class="w-full" :rows="3"
+              placeholder="What is this transaction used for?" />
           </UFormField>
 
           <div class="modal-row">
@@ -344,33 +227,30 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               <UInput v-model="state.amount" type="number" class="w-full" />
             </UFormField>
             <UFormField label="Currency" name="currency">
-              <USelectMenu
-                v-model="state.currency"
-                :items="itemsCurrency"
-                class="w-full"
-              />
+              <USelectMenu v-model="state.currency" :items="itemsCurrency1" class="w-full" />
             </UFormField>
           </div>
 
-          <div class="modal-row" v-if="checkboxValue">
+          <UFormField label="Categories" name="categories">
+            <USelectMenu v-model="state.categories" :items="props.categories" label-key="name" multiple class="w-full"
+              placeholder="Select categories" />
+          </UFormField>
+
+          <div class="check-box-custom-date">
+            <span> Set transaction date </span>
+            <UCheckbox v-model="checkboxValue" />
+          </div>
+
+          <div class="modal-row-h" :class="checkboxValue ? 'mshow' : ''">
             <UFormField label="Date of Transaction" name="customCreationDate">
               <UInputDate ref="inputDate" v-model="state.customCreationDate">
                 <template #trailing>
                   <UPopover :reference="inputDate?.inputsRef[3]?.$el">
-                    <UButton
-                      color="neutral"
-                      variant="link"
-                      size="sm"
-                      icon="i-lucide-calendar"
-                      aria-label="Select a date"
-                      class="px-0"
-                    />
+                    <UButton color="neutral" variant="link" size="sm" icon="i-lucide-calendar"
+                      aria-label="Select a date" class="px-0" />
 
                     <template #content>
-                      <UCalendar
-                        v-model="state.customCreationDate"
-                        class="p-2"
-                      />
+                      <UCalendar v-model="state.customCreationDate" class="p-2" />
                     </template>
                   </UPopover>
                 </template>
@@ -382,62 +262,30 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             </UFormField>
           </div>
 
-          <div class="check-box-custom-date">
-            <span> Set transaction date </span>
-            <UCheckbox v-model="checkboxValue" />
-          </div>
-
           <div class="additional-info-wrapper">
             <div class="add-inf-header">
               <span> Bought Products </span>
 
               <UButton color="neutral" @click="addProduct()" variant="outline">
-                + Add row</UButton
-              >
+                + Add row</UButton>
             </div>
 
             <div class="add-inf-content">
-              <div
-                v-if="state.lineInformation.length > 0"
-                class="modal-row-2"
-                v-for="(item, index) in state.lineInformation"
-                :key="item.Id"
-              >
-                <UFormField
-                  label="Label"
-                  :name="`lineInformation.${index}.productName`"
-                >
-                  <UInput
-                    v-model="item.productName"
-                    class="w-full"
-                    placeholder="Insert Product Name"
-                  />
+              <div v-if="state.lineInformation.length > 0" class="modal-row-2"
+                v-for="(item, index) in state.lineInformation" :key="item.Id">
+                <UFormField label="Label" :name="`lineInformation.${index}.productName`">
+                  <UInput v-model="item.productName" class="w-full" placeholder="Insert Product Name" />
                 </UFormField>
 
-                <UFormField
-                  label="Amount"
-                  :name="`lineInformation.${index}.amount`"
-                >
+                <UFormField label="Amount" :name="`lineInformation.${index}.amount`">
                   <UInput v-model="item.amount" type="number" class="w-full" />
                 </UFormField>
 
                 <div class="row-actions">
-                  <UButton
-                    icon="i-lucide-copy"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    aria-label="Duplicate row"
-                    @click="duplicateProduct(item)"
-                  />
-                  <UButton
-                    icon="i-lucide-x"
-                    color="error"
-                    variant="outline"
-                    size="sm"
-                    aria-label="Remove row"
-                    @click="removeProduct(item)"
-                  />
+                  <UButton icon="i-lucide-copy" color="neutral" variant="outline" size="sm" aria-label="Duplicate row"
+                    @click="duplicateProduct(item)" />
+                  <UButton icon="i-lucide-x" color="error" variant="outline" size="sm" aria-label="Remove row"
+                    @click="removeProduct(item)" />
                 </div>
               </div>
 
@@ -447,9 +295,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             </div>
 
             <div class="add-foot">
-              <span>Net adjustment</span>
+              <span class="net-h">Net adjustment</span>
 
-              <div class="net-adj-copy"></div>
+              <UTooltip :open="copiedProduct" text="Copied!">
+                <div class="net-adj-copy" @click="copyProduct()">
+                  {{ computeNetProduct + ' ' + state.currency }}
+                </div>
+              </UTooltip>
             </div>
           </div>
 
@@ -457,65 +309,30 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             <div class="add-inf-header">
               <span> Additions and deductions </span>
 
-              <UButton
-                color="neutral"
-                @click="addAdditionalInfo()"
-                variant="outline"
-              >
-                + Add row</UButton
-              >
+              <UButton color="neutral" @click="addAdditionalInfo()" variant="outline">
+                + Add row</UButton>
             </div>
 
             <div class="add-inf-content">
-              <div
-                v-if="state.additionalInfo.length > 0"
-                class="modal-row-3"
-                v-for="(item, index) in state.additionalInfo"
-                :key="item.Id"
-              >
-                <UFormField
-                  label="Label"
-                  :name="`additionalInfo.${index}.label`"
-                >
-                  <UInput
-                    v-model="item.label"
-                    class="w-full"
-                    placeholder="Insert Name"
-                  />
+              <div v-if="state.additionalInfo.length > 0" class="modal-row-3"
+                v-for="(item, index) in state.additionalInfo" :key="item.Id">
+                <UFormField label="Label" :name="`additionalInfo.${index}.label`">
+                  <UInput v-model="item.label" class="w-full" placeholder="Insert Name" />
                 </UFormField>
 
-                <UFormField
-                  label="Amount"
-                  :name="`additionalInfo.${index}.amount`"
-                >
+                <UFormField label="Amount" :name="`additionalInfo.${index}.amount`">
                   <UInput v-model="item.amount" type="number" class="w-full" />
                 </UFormField>
 
                 <UFormField label="Type" :name="`additionalInfo.${index}.kind`">
-                  <USelect
-                    v-model="item.kind"
-                    :items="['DEDUCTION', 'ADDITION']"
-                    class="w-full"
-                  />
+                  <USelect v-model="item.kind" :items="['DEDUCTION', 'ADDITION']" class="w-full" />
                 </UFormField>
 
                 <div class="row-actions">
-                  <UButton
-                    icon="i-lucide-copy"
-                    color="neutral"
-                    variant="outline"
-                    size="sm"
-                    aria-label="Duplicate row"
-                    @click="duplicateAdditionalInfo(item)"
-                  />
-                  <UButton
-                    icon="i-lucide-x"
-                    color="error"
-                    variant="outline"
-                    size="sm"
-                    aria-label="Remove row"
-                    @click="removeAdditionalInfo(item)"
-                  />
+                  <UButton icon="i-lucide-copy" color="neutral" variant="outline" size="sm" aria-label="Duplicate row"
+                    @click="duplicateAdditionalInfo(item)" />
+                  <UButton icon="i-lucide-x" color="error" variant="outline" size="sm" aria-label="Remove row"
+                    @click="removeAdditionalInfo(item)" />
                 </div>
               </div>
 
@@ -524,6 +341,34 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
                 changes.
               </div>
             </div>
+
+            <div class="add-foot">
+              <span class="net-h">Net adjustment</span>
+              <UTooltip :open="copiedInfo" text="Copied!">
+                <div class="net-adj-copy" @click="copyInfo()">
+                  {{ computeAdditionalInfo + ' ' + state.currency }}
+                </div>
+              </UTooltip>
+            </div>
+          </div>
+
+          <div class="check-box-custom-date">
+            <span> Set transaction as recurring </span>
+            <UCheckbox v-model="checkboxValueRecurring" />
+          </div>
+
+          <div class="modal-row-h-3" :class="checkboxValueRecurring ? 'mshow' : ''">
+            <UFormField label="Repeat every" name="recurrenceNum">
+              <UInput v-model="state.recurrenceNum" class="w-full" type="number" />
+            </UFormField>
+
+            <UFormField label="Recurrence Type" name="ruleType">
+              <USelect v-model="state.ruleType" :items="['DAY', 'WEEK', 'MONTH', 'YEAR']" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Max Recurrence Num." name="maxNumOfOccurrencesAllowed">
+              <UInput v-model="state.maxNumOfOccurrencesAllowed" class="w-full" type="number" />
+            </UFormField>
           </div>
 
           <UButton type="submit"> Submit </UButton>
@@ -535,14 +380,17 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 <style scoped>
 .form-wrapper {
-  overflow-y: scroll;
-}
+  padding: 24px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;}
 
 .modal-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+
 .modal-row-3 {
   display: grid;
   grid-template-columns: 2fr 2fr 2fr 1fr;
@@ -559,15 +407,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   padding: 8px;
 }
 
-.form-wrapper {
-  padding: 8px;
-}
-
 .check-box-custom-date {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 4px;
+  padding-top: 16px;
   gap: 8px;
 }
 
@@ -618,8 +462,119 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   color: gray;
 }
 
+.add-foot {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+  padding: 6px;
+  border-top: 1px solid lightgray;
+  background-color: #efeff5;
+  border-radius: 0px 0px 12px 12px;
+}
+
+.net-h {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.net-adj-copy {
+  font-size: 12px;
+  font-weight: 500;
+  color: gray;
+  cursor: pointer;
+  user-select: none;
+  display: inline-block;
+  transition: color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.net-adj-copy:hover {
+  color: #333;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.net-adj-copy:active {
+  color: #000;
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+.modal-row-h {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-height: 0px;
+  overflow: hidden;
+  gap: 16px;
+  transition: max-height 0.5s ease;
+}
+
+.modal-row-h.mshow {
+  max-height: 300px;
+}
+
+.modal-row-h-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  max-height: 0px;
+  overflow: hidden;
+  gap: 16px;
+  transition: max-height 0.5s ease;
+}
+
+.form-creation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid lightgray;
+}
+
+.form-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.modal-row-h-3.mshow {
+  max-height: 300px;
+}
+
+
+.acc-transaction-active {
+  background: #2563eb;
+  color: #ffffff;
+  border: 1px solid #2563eb;
+  border-radius: 7px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.acc-transaction-active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.acc-transaction-disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 @media (max-width: 720px) {
   .modal-row-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .modal-row-h-3 {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -634,6 +589,14 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 
   .modal-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-row-h {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-row-h-3 {
     grid-template-columns: 1fr;
   }
 }
