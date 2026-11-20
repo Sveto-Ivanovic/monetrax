@@ -22,9 +22,6 @@ public class TransactionCreate {
     @Size(min = 4, max = 100, message = "Size of the name must be between 4 and 100 characters.")
     private String name;
 
-    @NotNull
-    @NotBlank(message = "Label must be present.")
-    @Size(min = 4, max = 250, message = "Size of the name must be between 4 and 100 characters.")
     private String description;
 
     @NotNull
