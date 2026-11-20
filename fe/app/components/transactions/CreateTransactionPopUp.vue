@@ -399,12 +399,20 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   padding: 8px;
 }
 
+.modal-row-3:not(:last-child) {
+  border-bottom: 1px solid lightgray;
+}
+
 .modal-row-2 {
   display: grid;
   grid-template-columns: 3fr 3fr 1fr;
   align-items: center;
   gap: 8px;
   padding: 8px;
+}
+
+.modal-row-2:not(:last-child) {
+  border-bottom: 1px solid lightgray;
 }
 
 .check-box-custom-date {
