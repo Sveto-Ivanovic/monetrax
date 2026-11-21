@@ -20,3 +20,46 @@ export interface ListOfAccountTransactions {
   listOfProducts: string[]
   alerts: AlertInformation[]
 }
+
+export type AdjustmentKind = "DEDUCTION" | "ADDITION";
+
+export type TransactionRecurrenceType = "DAY" | "WEEK" | "MONTH" | "YEAR";
+
+export interface RequestedCategoryInformation {
+  categoryId: string;
+  name: string;
+}
+
+export interface TransactionAdditionalInfoCreate {
+  kind: AdjustmentKind;
+  label: string;
+  amount: number; 
+}
+
+export interface TransactionLineItemsCreate {
+  productName: string;
+  amount: number; 
+}
+
+export interface TransactionRecurrenceRule {
+  ruleType: TransactionRecurrenceType;
+  recurrenceNum: number;
+  maxNumOfOccurrencesAllowed?: number | null;
+}
+
+export interface TransactionCreate {
+  name: string;
+  description?: string | null;
+  amount: number; 
+  currency: string;
+  customCreationDate?: string | null; 
+  categories: RequestedCategoryInformation[];
+  additionalInfo: TransactionAdditionalInfoCreate[];
+  lineInformation: TransactionLineItemsCreate[];
+  transactionRecurrenceRule?: TransactionRecurrenceRule | null;
+}
+
+export interface TransactionCreateUpdateResponse {
+  msg: string;
+  transactionId: string;
+}

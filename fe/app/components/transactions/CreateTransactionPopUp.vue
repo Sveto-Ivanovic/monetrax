@@ -3,6 +3,12 @@ import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
 import { CalendarDate, Time, now } from '@internationalized/date';
 import { itemsCurrency as itemsCurrency1 } from '~/components/data/currencies'
+import { useUserStore } from '~/store/user';
+import { apiRouter } from '~/services/serviceWrapper';
+import type { TransactionCreate } from '~/services/transactions/types';
+import { zonedToUtc } from '~/utilis/timezoneUtilis/convertTimezone';
+import { getErrorMessage } from '~/utilis/getErrormessage';
+import { useQueryClient } from '@tanstack/vue-query';
 const inputDate = useTemplateRef('inputDate');
 const uuid = () => crypto.randomUUID();
 
@@ -16,18 +22,14 @@ const props = withDefaults(
   defineProps<{
     categories?: Category[];
     disabled: boolean;
+    accountId: string;
   }>(),
   {
-    categories: () => [
-      { categoryId: '1', name: 'Category 1' },
-      { categoryId: '2', name: 'Category 2' },
-      { categoryId: '3', name: 'Category 3' },
-    ],
     disabled: false
   }
 );
 
-const selectedTimezone = 'UTC';
+const selectedTimezone = useUserStore().selectedTimeZone;
 const yesterday = now(selectedTimezone).subtract({ days: 1 });
 
 const productLineSchema = v.object({
@@ -106,8 +108,8 @@ const state = reactive({
   description: '',
   currency: 'EUR',
   amount: 0.01,
-customCreationDate: markRaw(new CalendarDate(yesterday.year, yesterday.month, yesterday.day)),
-customCreationTime: markRaw(new Time(12, 0)),
+  customCreationDate: markRaw(new CalendarDate(yesterday.year, yesterday.month, yesterday.day)),
+  customCreationTime: markRaw(new Time(12, 0)),
   categories: [],
   additionalInfo: [],
   lineInformation: [],
@@ -194,18 +196,91 @@ onBeforeUnmount(() => clearTimeout(timerProduct));
 const checkboxValue = ref(false);
 const checkboxValueRecurring = ref(false);
 
+const transactionApi = apiRouter.transactionApi()
+const createTransactionMutation = transactionApi.createTransaction()
+const loadingBut = ref(false)
+const createTransactionErr = ref('')
+const open = ref(false)
+const queryCLient = useQueryClient()
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  console.log(event.data);
+  createTransactionErr.value = ''
+  loadingBut.value = true
+  let transactionCreate: TransactionCreate = {
+    name: event.data.name,
+    amount: event.data.amount,
+    currency: event.data.currency,
+    categories: event.data.categories,
+    additionalInfo: event.data.additionalInfo,
+    lineInformation: event.data.lineInformation,
+  }
+
+  if (checkboxValue.value) {
+    const local = `${event.data.customCreationDate.toString()}T${event.data.customCreationTime.toString()}`
+    transactionCreate['customCreationDate'] = zonedToUtc(local, selectedTimezone).toISOString()
+  }
+
+  if (checkboxValueRecurring.value) {
+    transactionCreate['transactionRecurrenceRule'] = {
+      ruleType: event.data.ruleType,
+      recurrenceNum: event.data.recurrenceNum,
+      maxNumOfOccurrencesAllowed: event.data.maxNumOfOccurrencesAllowed
+    }
+  }
+
+  try {
+    const res = await createTransactionMutation.mutateAsync({ req: transactionCreate, account_id: props.accountId })
+
+    open.value = false
+    const yesterday = now(selectedTimezone).subtract({ days: 1 })
+  await queryCLient.invalidateQueries({
+    queryKey: ['account', 'get', props.accountId, 'transactions'],
+  })
+
+    Object.assign(state, {
+      name: '',
+      description: '',
+      currency: 'EUR',
+      amount: 0.01,
+      customCreationDate: markRaw(
+        new CalendarDate(yesterday.year, yesterday.month, yesterday.day)
+      ),
+      customCreationTime: markRaw(new Time(12, 0)),
+      categories: [],
+      additionalInfo: [],
+      lineInformation: [],
+      recurrenceNum: 1,
+      maxNumOfOccurrencesAllowed: 1,
+      ruleType: 'DAY',
+    })
+
+    checkboxValue.value = false
+    checkboxValueRecurring.value = false
+    createTransactionErr.value = ''
+
+  } catch (e) {
+    createTransactionErr.value = getErrorMessage(e)
+  }
+  finally {
+    loadingBut.value = false
+  }
+
 }
 </script>
 
 <template>
-  <UModal :ui="{ content: 'sm:max-w-3xl' }">
+  <UModal v-model:open="open" :ui="{ content: 'sm:max-w-3xl' }">
     <UButton label="Open" :class="!props.disabled ? 'acc-transaction-active' : 'acc-transaction-disabled'">+ Create
       Transaction</UButton>
 
     <template #content="{ close }">
       <div class="form-wrapper">
+          <div v-if="createTransactionErr" class="form-error" role="alert">
+    <UIcon name="i-lucide-circle-alert" class="form-error-icon" />
+    <span class="form-error-text">{{ createTransactionErr }}</span>
+  </div>
+
+
         <div class="form-creation-header">
           <h2 class="form-title">Create Transaction</h2>
 
@@ -371,7 +446,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             </UFormField>
           </div>
 
-          <UButton type="submit"> Submit </UButton>
+          <UButton type="submit" :loading="loadingBut" :disabled="loadingBut"> Submit </UButton>
         </UForm>
       </div>
     </template>
@@ -383,7 +458,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   padding: 24px;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;}
+  overflow-y: auto;
+}
 
 .modal-row {
   display: grid;
@@ -575,6 +651,33 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   border-radius: 7px;
   cursor: not-allowed;
   opacity: 0.7;
+}
+.form-error {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+  border-radius: 8px;
+}
+
+.form-error-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+  color: #dc2626;
+}
+
+.form-error-text {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #991b1b;
+  word-break: break-word;
 }
 
 @media (max-width: 720px) {

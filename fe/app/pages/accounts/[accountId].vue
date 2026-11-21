@@ -13,23 +13,25 @@ import { getPaginationRowModel } from '@tanstack/vue-table'
 import AlertComponent from '~/components/alerts/AlertComponent.vue'
 import type { AlertInformation } from '~/services/alerts/types'
 import CreateTransactionPopUp from '~/components/transactions/CreateTransactionPopUp.vue'
+import CreateAlertPopUp from '~/components/transactions/CreateAlertPopUp.vue'
+import { apiRouter } from '~/services/serviceWrapper'
+import { getErrorMessage } from '~/utilis/getErrormessage'
+import AppLoading from '~/components/loading/AppLoading.vue'
+
 
 const route = useRoute()
 
-
+const transactionApi = apiRouter.transactionApi()
 // switch with the endpoint
-const accountTransactions = accountTransactionsExamples
+const accountId = route.params.accountId as string
 
 
-
-function openTransactionModal() {
-
-}
+const { data: accountTransactions, isLoading, isError, error, refetch } = transactionApi.fetchAccountTransactions(accountId);
 
 
-function openAlertModal() {
-
-}
+const errorMessage = computed(() =>
+    error.value ? getErrorMessage(error.value) : ""
+);
 
 
 function handleArchive(accountId: string, active: boolean) {
@@ -89,7 +91,7 @@ const getCashFlowMonthlyData = computed<{
 }>(() => {
 
 
-    if (!accountTransactionsExamples.transactions?.length) {
+    if (!accountTransactions.value?.transactions?.length) {
         return {
             net: [],
             income: [],
@@ -97,7 +99,7 @@ const getCashFlowMonthlyData = computed<{
         }
     }
 
-    let tempArray = accountTransactionsExamples.transactions
+    let tempArray = accountTransactions.value?.transactions
 
     // here im getting array of strings representing the months i need
     const currentDate = new Date();
@@ -127,20 +129,20 @@ const getCashFlowMonthlyData = computed<{
         months.push(monthString);
 
         begingReduceState['income'][monthString] = {
-            currency: accountTransactions.account.currency,
+            currency: accountTransactions.value?.account.currency,
             value: 0.01,
             month: monthString
         } as ValState;
 
         begingReduceState['expenses'][monthString] = {
-            currency: accountTransactions.account.currency,
+            currency: accountTransactions.value?.account.currency,
             value: 0.01,
             month: monthString
         } as ValState;
 
 
         begingReduceState['net'][monthString] = {
-            currency: accountTransactions.account.currency,
+            currency: accountTransactions.value?.account.currency,
             value: 0.01,
             month: monthString
         } as ValState;
@@ -213,7 +215,7 @@ const getNet = computed<{
         const currentMonth = tempArray[0];
         const previousMonth = tempArray[1];
 
-        if (currentMonth && previousMonth && previousMonth.value != 0) {
+        if (currentMonth && previousMonth && previousMonth.value > 0.1) {
             const change = ((currentMonth.value - previousMonth.value) / Math.abs(previousMonth.value)) * 100
 
             const changeString = Math.abs(change).toFixed(2)
@@ -281,7 +283,7 @@ const getIncome = computed<{
         const currentMonth = tempArray[0];
         const previousMonth = tempArray[1];
 
-        if (currentMonth && previousMonth && previousMonth.value != 0) {
+        if (currentMonth && previousMonth && previousMonth.value > 0.1) {
             const change =
                 ((currentMonth.value - previousMonth.value) /
                     previousMonth.value) * 100;
@@ -350,7 +352,7 @@ const getExpenses = computed<{
         const currentMonth = tempArray[0];
         const previousMonth = tempArray[1];
 
-        if (currentMonth && previousMonth && previousMonth.value != 0) {
+        if (currentMonth && previousMonth && previousMonth.value > 0.1) {
             const change =
                 ((currentMonth.value - previousMonth.value) /
                     previousMonth.value) * 100;
@@ -396,7 +398,12 @@ const globalFilter = ref('')
 
 
 let tableTransactions = computed<ColTypes[]>(() => {
-    return accountTransactions.transactions.map((x) => {
+    const transactions = accountTransactions.value?.transactions
+
+    if (!transactions || transactions.length === 0) {
+        return []
+    }
+    return transactions.map((x) => {
         return {
             name: x.name,
             description: x.description,
@@ -413,8 +420,9 @@ let tableTransactions = computed<ColTypes[]>(() => {
 })
 
 // here we get tranasction options
-const columns: TableColumn<ColTypes>[] = getTransactionColumns(getRowItems, accountTransactions.account.currency)
-
+const columns = computed<TableColumn<ColTypes>[]>(() =>
+    getTransactionColumns(getRowItems, accountTransactions.value?.account.currency ?? 'EUR')
+)
 function getRowItems(row: TableRow<ColTypes>): DropdownMenuItem[] {
     return [
         { type: 'label', label: 'Actions' },
@@ -449,9 +457,20 @@ const alerts = computed<{
     alertsSorted: AlertInformation[],
     numBreach: number
 }>(() => {
-    const breachedAlertsCount = accountTransactions.alerts.filter(alert => alert.breached).length;
 
-    const sorte = [...accountTransactions.alerts].sort(
+    let alertz = accountTransactions.value?.alerts ?? [];
+
+    if (alertz.length == 0) {
+        return {
+            alertsSorted: [],
+            numBreach: 0
+        }
+    }
+
+
+    const breachedAlertsCount = alertz.filter(alert => alert.breached).length;
+
+    const sorte = [...alertz].sort(
         (a, b) => Number(b.breached) - Number(a.breached)
     );
 
@@ -471,7 +490,15 @@ definePageMeta({
 </script>
 
 <template>
-    <div class="account">
+
+    <AppLoading v-if="isLoading" />
+
+    <div v-else-if="isError" class="dashboard-error">
+        <p class="dashboard-error-title">Couldn't load analytics</p>s
+        <p class="dashboard-error-message">{{ errorMessage }}</p>
+        <UButton @click="refetch()">Retry</UButton>
+    </div>
+    <div v-else-if="accountTransactions" class="account">
 
 
         <!-- Header -->
@@ -479,22 +506,22 @@ definePageMeta({
             <div class="acc-inf-header">
                 <div class="acc-inf-header-left">
                     <div class="name-and-active">
-                        <span class="acc-name"> {{ accountTransactions.account.name }} </span>
-                        <span :class="accountTransactions.account.active ? 'acc-active' : 'acc-archived'"> {{
-                            accountTransactions.account.active ? 'active' : 'archived' }} </span>
+                        <span class="acc-name"> {{ accountTransactions?.account.name }} </span>
+                        <span :class="accountTransactions?.account.active ? 'acc-active' : 'acc-archived'"> {{
+                            accountTransactions?.account.active ? 'active' : 'archived' }} </span>
                     </div>
 
                     <div class="acc-sub-info">
-                        <span>{{ accountTransactions.account.institutionName }}</span>
-                        <span>{{ '**** **** **** ' + accountTransactions.account.accountNumberMasked }}</span>
-                        <span>{{ accountTransactions.account.currency }}</span>
+                        <span>{{ accountTransactions?.account.institutionName }}</span>
+                        <span>{{ '**** **** **** ' + accountTransactions?.account.accountNumberMasked }}</span>
+                        <span>{{ accountTransactions?.account.currency }}</span>
                     </div>
                 </div>
 
                 <div class="acc-inf-header-right">
                     <span class="balance-desc"> Current Balance </span>
-                    <span class="balance-format"> {{ formatCurrency(accountTransactions.account.currentBalance,
-                        accountTransactions.account.currency) }} </span>
+                    <span class="balance-format"> {{ formatCurrency(accountTransactions?.account?.currentBalance ?? 0,
+                        accountTransactions?.account?.currency ?? 'EUR') }} </span>
                 </div>
             </div>
 
@@ -502,19 +529,22 @@ definePageMeta({
 
             <div class="account-info-buttons">
                 <div class="acc-inf-creation-buttons">
-               
-                    <CreateTransactionPopUp :disabled="!accountTransactions.account.active" :categories="accountTransactions.categoryInformationList.map((x) => { return { categoryId: x.categoryId, name: x.name } })
-                        "></CreateTransactionPopUp>
-                    <UButton :class="accountTransactions.account.active ? 'acc-alert-active' : 'acc-alert-disabled'"
-                        @click="openAlertModal()">+ Add Alert</UButton>
+
+                    <CreateTransactionPopUp :disabled="!accountTransactions?.account.active" :categories="accountTransactions?.categoryInformationList.map((x) => { return { categoryId: x.categoryId, name: x.name } })
+                        " :accountId="accountId"></CreateTransactionPopUp>
+
+                    <CreateAlertPopUp :disabled="!accountTransactions?.account.active" :accountId="accountId"
+                        :categories="accountTransactions?.categoryInformationList.map((x) => { return { categoryId: x.categoryId, name: x.name } })">
+                    </CreateAlertPopUp>
+
                 </div>
                 <div class="archive-analytics">
                     <UButton
-                        @click="handleArchive(accountTransactions.account.accountId, accountTransactions.account.active)"
-                        :class="accountTransactions.account.active ? 'acc-inf-arch' : 'acc-inf-unarch'">{{
-                            accountTransactions.account.active ? 'Archive' : 'Unarchive' }}</UButton>
+                        @click="handleArchive(accountTransactions?.account?.accountId ?? '', accountTransactions?.account?.active ?? true)"
+                        :class="accountTransactions?.account.active ? 'acc-inf-arch' : 'acc-inf-unarch'">{{
+                            accountTransactions?.account.active ? 'Archive' : 'Unarchive' }}</UButton>
 
-                    <ULink class="acc-analytics" :to="'/accounts/analytics/' + accountTransactions.account.accountId">
+                    <ULink class="acc-analytics" :to="'/accounts/analytics/' + accountTransactions?.account.accountId">
                         Display Account Analytics
                     </ULink>
                 </div>
@@ -659,7 +689,7 @@ definePageMeta({
                         </div>
                         <div>
                             <span class="alert-span">Num. alerts</span>
-                            <span class="alert-panel-count">{{ accountTransactions.alerts.length }}</span>
+                            <span class="alert-panel-count">{{ accountTransactions?.alerts.length }}</span>
                         </div>
                     </div>
 
@@ -668,7 +698,11 @@ definePageMeta({
                 <div class="alert-list">
                     <div v-for="value in alerts.alertsSorted" :key="value.alertId"
                         :class="value.breached ? 'alert-border-breached' : 'alert-border-normal'">
-                        <AlertComponent :alert-information="value" :currency="accountTransactions.account.currency" />
+                        <AlertComponent :alert-information="value"
+                            :currency="accountTransactions?.account?.currency ?? 'EUR'" />
+                    </div>
+                    <div class="no-alerts" v-if="alerts.alertsSorted.length===0">
+                        No data    
                     </div>
                 </div>
             </div>
@@ -1147,6 +1181,31 @@ definePageMeta({
     overflow: hidden;
 }
 
+
+.dashboard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ui-error, #ef4444);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-error, #ef4444) 10%, transparent);
+}
+
+.dashboard-error-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ui-error, #ef4444);
+}
+
+.dashboard-error-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ui-text-muted, #6b7280);
+}
+
+
 .alert-list {
     display: flex;
     flex-direction: column;
@@ -1200,6 +1259,14 @@ definePageMeta({
     border-radius: 8px;
 
 
+}
+
+.no-alerts {
+    font-size: 14px;
+    font-weight: 500;
+    color: #94a3b8;
+    text-align: center;
+    padding: 24px 16px;
 }
 
 .alert-border-breached {

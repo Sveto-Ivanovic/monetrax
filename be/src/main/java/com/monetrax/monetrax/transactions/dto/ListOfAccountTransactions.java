@@ -1,6 +1,7 @@
 package com.monetrax.monetrax.transactions.dto;
 
 import com.monetrax.monetrax.accounts.dto.AccountInformation;
+import com.monetrax.monetrax.alerts.dto.AlertInformation;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import lombok.AllArgsConstructor;
@@ -22,5 +23,6 @@ public class ListOfAccountTransactions {
     private List<TransactionInformationPart> transactions;
     private List<CategoryInformation> categoryInformationList;
     private List<String> listOfProducts;
+    private List<AlertInformation> alerts;
 }
 

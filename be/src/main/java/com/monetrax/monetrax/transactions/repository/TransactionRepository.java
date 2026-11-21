@@ -50,7 +50,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     """)
     List<MonthlyBalance> findMonthlyAmountsByMonth(UUID id, OffsetDateTime from, List<CategoryKind> categoryKindList);
 
-    @Query("select t from TransactionEntity t where t.user.userId = ?1 order by t.createdAt desc")
+    @Query("select t from TransactionEntity t join fetch t.account where t.user.userId = ?1 order by t.createdAt desc")
     List<TransactionEntity> findRecentTransactions(UUID userId, Pageable pageable);
 
     @Query("select t from TransactionEntity t join fetch t.account where t.user.userId = ?1 and t.createdAt >= ?2 and t.createdAt <= ?3")

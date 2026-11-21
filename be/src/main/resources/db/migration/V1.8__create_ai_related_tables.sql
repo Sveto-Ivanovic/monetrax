@@ -28,10 +28,6 @@ CREATE TABLE IF NOT EXISTS api_keys (
 
 CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys (user_id);
 
-DROP TRIGGER IF EXISTS trg_api_keys_updated_at ON api_keys;
-CREATE TRIGGER trg_api_keys_updated_at
-    BEFORE UPDATE ON api_keys
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 
 CREATE TABLE IF NOT EXISTS message_history (
@@ -59,8 +55,3 @@ CREATE TABLE IF NOT EXISTS message_history (
 
 CREATE INDEX IF NOT EXISTS idx_message_history_user_id
     ON message_history (user_id);
-
-DROP TRIGGER IF EXISTS trg_message_history_updated_at ON message_history;
-CREATE TRIGGER trg_message_history_updated_at
-    BEFORE UPDATE ON message_history
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();

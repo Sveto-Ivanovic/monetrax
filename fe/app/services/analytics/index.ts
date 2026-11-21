@@ -3,7 +3,7 @@ import type {
   CommonErrorResponse
 } from "../usermanagement/types";
 import type { FetchedDashboardAnalyticsData } from "./types";
-
+import { FetchError } from "ofetch";
 
 
 export function analyticsManagementApi() {
@@ -11,7 +11,7 @@ export function analyticsManagementApi() {
     const { $customFetch } = useNuxtApp()
 
     const api = {
-        dashboard: () => $customFetch<FetchedDashboardAnalyticsData | CommonErrorResponse | any>("/analytics/fetch/dashboard", {
+        dashboard: () => $customFetch<FetchedDashboardAnalyticsData>("/analytics/fetch/dashboard", {
             method: 'GET',
             credentials: 'omit'
         })
@@ -19,7 +19,7 @@ export function analyticsManagementApi() {
 
 
   function fetchDashboardAnalytics() {
-        return useQuery({
+        return useQuery<FetchedDashboardAnalyticsData, FetchError>({
             queryKey: ['dashboard', 'analytics'],
             queryFn: () => api.dashboard()
         });

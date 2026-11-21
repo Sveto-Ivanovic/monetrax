@@ -1,5 +1,12 @@
 <template>
-    <div class="accounts">
+    <AppLoading v-if="isLoading" />
+
+    <div v-else-if="isError" class="dashboard-error">
+        <p class="dashboard-error-title">Couldn't load analytics</p>s
+        <p class="dashboard-error-message">{{ errorMessage }}</p>
+        <UButton @click="refetch()">Retry</UButton>
+    </div>
+    <div v-else-if="data" class="accounts">
 
         <header class="accounts-header">
             <div>
@@ -37,7 +44,7 @@
                         <span class="acc-name"> {{ item.name }}</span>
                         <span :class="item.active ? 'acc-active' : 'acc-archived'">{{ item.active ? 'active' :
                             'archived'
-                        }}</span>
+                            }}</span>
                     </div>
 
                     <div class="acc-desc">
@@ -64,6 +71,10 @@
             }">
                 <template #content>
                     <div class="account-modal">
+
+                        <div class="error-class" v-if="errorFetch!=''">
+                            {{ errorFetch }}
+                        </div>
 
                         <header class="modal-header">
                             <h2 class="modal-title">Add new account</h2>
@@ -106,7 +117,7 @@
                                 <UButton type="button" color="neutral" variant="ghost" @click.prevent="isOpen = false">
                                     Cancel
                                 </UButton>
-                                <UButton type="submit" class="modal-submit">
+                                <UButton type="submit" class="modal-submit" :loading="isLoadingFetch" :disabled="isLoadingFetch">
                                     Create Account
                                 </UButton>
                             </footer>
@@ -128,12 +139,26 @@ import * as v from 'valibot'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { formatCurrency } from '~/utilis/formaters/balanceFormater';
 import { itemsCurrency as itemsCurrency1 } from '~/components/data/currencies'
+import { apiRouter } from '~/services/serviceWrapper';
+import { getErrorMessage } from '~/utilis/getErrormessage';
+import AppLoading from '~/components/loading/AppLoading.vue';
+import type { AccountCreate } from '~/services/accounts/types';
+import { QueryClient, useQueryClient } from '@tanstack/vue-query';
+
+const accountApi = apiRouter.accountApi()
+const { data, isLoading, isError, error, refetch } = accountApi.fetchAccounts(true);
+const accounts = computed(() => data.value?.entityList ?? [])
+
+
+const errorMessage = computed(() =>
+    error.value ? getErrorMessage(error.value) : ""
+);
 
 const isOpen = ref(false);
 const items = ref(['Active', 'Archived', 'All'])
 const value = ref('Active')
-const activeCount = computed(() => accounts.filter(a => a.active).length);
-const archivedCount = computed(() => accounts.filter(a => !a.active).length);
+const activeCount = computed(() => accounts.value?.filter(a => a.active).length ?? 0);
+const archivedCount = computed(() => accounts.value?.filter(a => !a.active).length ?? 0);
 
 const schema = v.object({
     name: v.pipe(v.string(), v.minLength(5, 'Account name must be 5 letters or more')),
@@ -156,86 +181,63 @@ const state = reactive({
     initalBalance: 0,
 })
 
+const queryClient = useQueryClient()
+const createAccMutation = accountApi.createAccount()
+const isLoadingFetch = ref(false)
+const errorFetch = ref('')
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+    isLoadingFetch.value = true
+    errorFetch.value = ''
+
     console.log(event.data)
+    const req: AccountCreate = {
+        name: event.data.name,
+        currency: event.data.currency,
+        description: event.data.description,
+        institutionName: event.data.institutionName,
+        accountNumberMasked: event.data.fourLastDigits,
+        initialBalance: event.data.initalBalance
+    }
+
+    try {
+        const res = await createAccMutation.mutateAsync(req)
+        console.log(res)
+        state.name=''
+        state.description=''
+        state.fourLastDigits=''
+        state.initalBalance=0
+        state.institutionName=''
+
+        isOpen.value=false
+        queryClient.invalidateQueries({ queryKey: ['accounts', 'get'] })
+        
+
+    } catch (e) {
+        errorFetch.value = getErrorMessage(e)
+    }
+    finally {
+        isLoadingFetch.value = false
+    }
+
 }
 
 
 
 
-let showAccounts = computed<{
-    accountId: string;
-    name: string;
-    description: string;
-    currentBalance: number;
-    currency: string;
-    institutionName: string;
-    accountNumberMasked: string;
-    active: boolean;
-}[]>(() => {
+let showAccounts = computed(() => {
     if (value.value === "All") {
-        return accounts
+        return accounts.value
     } else if (value.value === "Active") {
-        return accounts.filter(x => x.active)
+        return accounts.value?.filter(x => x.active)
     } else {
-        return accounts.filter(x => !x.active)
+        return accounts.value?.filter(x => !x.active)
     }
 })
 
 
 
-const accounts = [
-    {
-        accountId: 'a1b2c3d4-e5f6-7890-abcd-123456789001',
-        name: 'Main Checking Account',
-        description: 'Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions Everyday spending and transactions',
-        currentBalance: 4250.75,
-        currency: 'EUR',
-        institutionName: 'NLB Bank',
-        accountNumberMasked: '4521',
-        active: true,
-    },
-    {
-        accountId: 'a1b2c3d4-e5f6-7890-abcd-123456789002',
-        name: 'Savings Account',
-        description: 'Long-term savings and emergency fund',
-        currentBalance: 12500.00,
-        currency: 'EUR',
-        institutionName: 'CKB Bank',
-        accountNumberMasked: '7832',
-        active: true,
-    },
-    {
-        accountId: 'a1b2c3d4-e5f6-7890-abcd-123456789003',
-        name: 'Business Account',
-        description: 'Business income and operational expenses',
-        currentBalance: 8750.50,
-        currency: 'EUR',
-        institutionName: 'Erste Bank',
-        accountNumberMasked: '1945',
-        active: true,
-    },
-    {
-        accountId: 'a1b2c3d4-e5f6-7890-abcd-123456789004',
-        name: 'Travel Savings',
-        description: 'Savings for vacations and travel',
-        currentBalance: 2100.00,
-        currency: 'USD',
-        institutionName: 'NLB Bank',
-        accountNumberMasked: '6201',
-        active: true,
-    },
-    {
-        accountId: 'a1b2c3d4-e5f6-7890-abcd-123456789005',
-        name: 'Old Savings Account',
-        description: 'Previously used savings account',
-        currentBalance: 0.00,
-        currency: 'EUR',
-        institutionName: 'CKB Bank',
-        accountNumberMasked: '3389',
-        active: false,
-    },
-];
+
 
 definePageMeta({
     middleware: ['require-user-info'],
@@ -355,7 +357,8 @@ definePageMeta({
 }
 
 .account-create {
-    width: 100%;}
+    width: 100%;
+}
 
 .account-link {
     display: block;
@@ -549,6 +552,46 @@ definePageMeta({
 
 .modal-submit:hover {
     background-color: #4338ca;
+}
+
+
+.dashboard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ui-error, #ef4444);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-error, #ef4444) 10%, transparent);
+}
+
+.dashboard-error-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ui-error, #ef4444);
+}
+
+.dashboard-error-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ui-text-muted, #6b7280);
+}
+
+
+.error-class {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 @media (max-width: 520px) {

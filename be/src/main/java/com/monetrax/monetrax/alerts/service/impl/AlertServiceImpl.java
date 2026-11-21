@@ -89,13 +89,14 @@ public class AlertServiceImpl implements AlertService {
             throw new InvalidInputException("The value to evaluate needs to be non null.");
         }
 
-        boolean needsSecond = rule == RuleType.LESS_OR_EQUAL
-                || rule == RuleType.LESS
+        boolean needsSecond =
+                 rule == RuleType.GREATER_OR_EQUAL
+                || rule == RuleType.GREATER
                 || rule == RuleType.EQUAL
                 || rule == RuleType.BETWEEN;
 
-        boolean needsThird = rule == RuleType.GREATER_OR_EQUAL
-                || rule == RuleType.GREATER
+        boolean needsThird = rule == RuleType.LESS_OR_EQUAL
+                || rule == RuleType.LESS
                 || rule == RuleType.BETWEEN;
 
         if (needsSecond && secondVal == null) {
@@ -109,11 +110,11 @@ public class AlertServiceImpl implements AlertService {
         }
 
         return switch (rule) {
-            case LESS_OR_EQUAL    -> firstVal.compareTo(secondVal) <= 0;
-            case LESS              -> firstVal.compareTo(secondVal) < 0;
+            case LESS_OR_EQUAL    -> firstVal.compareTo(thirdVal) <= 0;
+            case LESS              -> firstVal.compareTo(thirdVal) < 0;
             case EQUAL              -> firstVal.compareTo(secondVal) == 0;
-            case GREATER_OR_EQUAL -> firstVal.compareTo(thirdVal) >= 0;
-            case GREATER            -> firstVal.compareTo(thirdVal) > 0;
+            case GREATER_OR_EQUAL -> firstVal.compareTo(secondVal) >= 0;
+            case GREATER            -> firstVal.compareTo(secondVal) > 0;
             case BETWEEN            -> firstVal.compareTo(secondVal) >= 0 && firstVal.compareTo(thirdVal) <= 0;
         };
     }
@@ -304,7 +305,7 @@ public class AlertServiceImpl implements AlertService {
 
         return AlertStateExtraction.builder()
                 .alertStates(alertStates)
-                .isBreached(isConditionFullFilled.stream().allMatch(x->x.equals(Boolean.TRUE)))
+                .isBreached(isConditionFullFilled.stream().anyMatch(met -> !met))
                 .build();
 
     }
@@ -337,13 +338,13 @@ public class AlertServiceImpl implements AlertService {
             }
 
             RuleType rule = x.getRuleType();
-            boolean needLowEqual = rule == RuleType.LESS_OR_EQUAL
-                    || rule == RuleType.LESS
+            boolean needLowEqual = rule == RuleType.GREATER_OR_EQUAL
+                    || rule == RuleType.GREATER
                     || rule == RuleType.EQUAL
                     || rule == RuleType.BETWEEN;
 
-            boolean needHigh = rule == RuleType.GREATER_OR_EQUAL
-                    || rule == RuleType.GREATER
+            boolean needHigh = rule == RuleType.LESS_OR_EQUAL
+                    || rule == RuleType.LESS
                     || rule == RuleType.BETWEEN;
 
             if (needLowEqual && x.getLimitValueLowOrEqual() == null) {
