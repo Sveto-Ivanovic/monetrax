@@ -240,7 +240,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 <template>
   <div>
-    <UModal :ui="{ content: 'sm:max-w-3xl' }">
+    <UModal v-model:open="open" :ui="{ content: 'sm:max-w-3xl' }">
 
       <UButton label="Open" :class="!props.disabled ? 'acc-alert-active' : 'acc-alert-disabled'">+ Add Alert</UButton>
 
@@ -366,7 +366,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               </UFormField>
             </div>
 
-            <UButton type="submit"> Submit </UButton>
+            <UButton type="submit" :loading="loadingBut"> Submit </UButton>
           </UForm>
         </div>
       </template>

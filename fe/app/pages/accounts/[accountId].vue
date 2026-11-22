@@ -419,9 +419,18 @@ let tableTransactions = computed<ColTypes[]>(() => {
     })
 })
 
+const existingCategories = computed(()=>{
+
+    const setOfCategories = new Set<string>()
+    const categoryIdsInTheTransactions = accountTransactions.value?.transactions.forEach(x=>{   
+       const categories =  x.categories
+        categories.forEach(x=>setOfCategories.add(x))
+    })
+    return [...setOfCategories]
+})
 // here we get tranasction options
 const columns = computed<TableColumn<ColTypes>[]>(() =>
-    getTransactionColumns(getRowItems, accountTransactions.value?.account.currency ?? 'EUR')
+    getTransactionColumns(getRowItems, accountTransactions.value?.account.currency ?? 'EUR', userStore.selectedTimeZone, existingCategories.value)
 )
 function getRowItems(row: TableRow<ColTypes>): DropdownMenuItem[] {
     return [

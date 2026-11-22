@@ -181,7 +181,7 @@
 
 
         <div class="as-footer" style="width: 100%; padding-top: 32px;">
-          <NuxtLink to="/accounts/createAcc" class="view-all-accs">+ Add an account</NuxtLink>
+          <NuxtLink to="/accounts" class="view-all-accs">+ Add an account</NuxtLink>
         </div>
 
       </div>
