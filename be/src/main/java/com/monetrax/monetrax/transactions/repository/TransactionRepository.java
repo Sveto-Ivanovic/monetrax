@@ -30,8 +30,12 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     @Query("select t from TransactionEntity t where t.user.userId = ?1")
     public List<TransactionEntity> fetchAllUserTransactions(UUID userId);
 
-    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt < ?4")
+    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt <= ?4")
     public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDate(UUID userId, UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
+
+    @Query("select t from TransactionEntity t where  t.account.accountId = ?1 and  t.createdAt >= ?2 and  t.createdAt <= ?3")
+    public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDateForAccount( UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
+
 
     @Query("select t from TransactionEntity t join fetch t.user join fetch t.account where t.transactionId in ?1")
     public List<TransactionEntity> fetchTransactionsForScheduler(List<UUID> transactionIds);

@@ -163,8 +163,22 @@ public class AlertServiceImpl implements AlertService {
                                                                                     List<AlertEntity> alertEntities,
                                                                                     Map<UUID, List<UUID>> categoriesInTheAlert){
 
+
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+
+        OffsetDateTime minFrom = alertEntities.stream()
+                .map(AlertEntity::getDateFrom)
+                .min(Comparator.naturalOrder())
+                .orElseThrow();
+
+        OffsetDateTime maxTo = alertEntities.stream()
+                .map(a -> a.getDateTo().isBefore(now) ? a.getDateTo() : now)
+                .max(Comparator.naturalOrder())
+                .orElseThrow();
+
+
         log.debug("Fetching account transactions for alerts: accountId={}, alertCount={}", accountId, alertEntities.size());
-        List<TransactionEntity> transactionEntityList = transactionRepository.fetchAllAccountTransactions(accountId);
+        List<TransactionEntity> transactionEntityList = transactionRepository.fetchUserTransactionsInsideSpecifiedDateForAccount(accountId, minFrom, maxTo);
         List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.
                 fetchAllTransactionCategoryIdsIn(transactionEntityList.stream().map(TransactionEntity::getTransactionId).toList());
         log.debug("Fetched {} transaction(s) and {} transaction-category link(s): accountId={}",
@@ -176,23 +190,12 @@ public class AlertServiceImpl implements AlertService {
 
         for(var alert: alertEntities){
 
-            OffsetDateTime dateFrom = OffsetDateTime.of(
-                    alert.getDateFrom(),
-                    LocalTime.of(0, 0),
-                    ZoneOffset.UTC
-            );
+            OffsetDateTime dateFrom = alert.getDateFrom();
 
-            LocalDate minDate = LocalDate.now(ZoneOffset.UTC)
+            OffsetDateTime dateTo = OffsetDateTime.now(ZoneOffset.UTC)
                     .isBefore(alert.getDateTo())
-                    ? LocalDate.now(ZoneOffset.UTC)
+                    ? OffsetDateTime.now(ZoneOffset.UTC)
                     : alert.getDateTo();
-
-
-            OffsetDateTime dateTo = OffsetDateTime.of(
-                    minDate,
-                    LocalTime.of(23, 59),
-                    ZoneOffset.UTC
-            );
 
             // transaction id - category ids
             Map<UUID, List<UUID>> uuidTransactionCategoriesEntityMap = transactionCategoriesEntityList.stream()
@@ -224,22 +227,12 @@ public class AlertServiceImpl implements AlertService {
     }
 
     private List<TransactionEntity> getTransactionsFromToDate(AlertEntity alertEntity, UUID userId, AccountEntity accountEntity){
-        OffsetDateTime dateFrom = OffsetDateTime.of(
-                alertEntity.getDateFrom(),
-                LocalTime.of(0, 0),
-                ZoneOffset.UTC
-        );
+        OffsetDateTime dateFrom = alertEntity.getDateFrom();
 
-        LocalDate minDate = LocalDate.now(ZoneOffset.UTC)
+        OffsetDateTime dateTo = OffsetDateTime.now(ZoneOffset.UTC)
                 .isBefore(alertEntity.getDateTo())
-                ? LocalDate.now(ZoneOffset.UTC)
+                ? OffsetDateTime.now(ZoneOffset.UTC)
                 : alertEntity.getDateTo();
-
-        OffsetDateTime dateTo = OffsetDateTime.of(
-                minDate,
-                LocalTime.of(23, 59),
-                ZoneOffset.UTC
-        );
 
         log.debug("Fetching transactions in alert window: alertId={}, accountId={}, from={}, to={}",
                 alertEntity.getAlertId(), accountEntity.getAccountId(), dateFrom, dateTo);
@@ -387,15 +380,15 @@ public class AlertServiceImpl implements AlertService {
         String originalName = alertEntity.getName();
 
         for(int i = 1; i<creationOption.getNumberOfOccurrences()+1; i++){
-            LocalDate dateFrom = alertEntityList.get(i-1).getDateFrom();
-            LocalDate dateTo = alertEntityList.get(i-1).getDateTo();
+            OffsetDateTime dateFrom = alertEntityList.get(i-1).getDateFrom();
+            OffsetDateTime dateTo = alertEntityList.get(i-1).getDateTo();
             String currentName = originalName + " iteration_" + i;
             int recurrenceNum = creationOption.getRecurrenceNum() > 0 ? creationOption.getRecurrenceNum(): 1;
 
-            LocalDate newDateFrom = switch (creationOption.getRuleType()){
+            OffsetDateTime newDateFrom = switch (creationOption.getRuleType()){
                 case EVERY_WEEK -> dateFrom.plusWeeks(recurrenceNum);
                 case EVERY_MONTH -> {
-                    boolean isLastDayOfMonth = dateFrom.getDayOfMonth() == dateFrom.lengthOfMonth();
+                    boolean isLastDayOfMonth = dateFrom.getDayOfMonth() == dateFrom.toLocalDate().lengthOfMonth();
                     yield isLastDayOfMonth
                             ? dateFrom.plusMonths(recurrenceNum).with(TemporalAdjusters.lastDayOfMonth())
                             : dateFrom.plusMonths(recurrenceNum);
@@ -408,10 +401,10 @@ public class AlertServiceImpl implements AlertService {
             };
 
 
-            LocalDate newDateTo = switch (creationOption.getRuleType()){
+            OffsetDateTime newDateTo = switch (creationOption.getRuleType()){
                 case EVERY_WEEK -> dateTo.plusWeeks(recurrenceNum);
                 case EVERY_MONTH -> {
-                    boolean isLastDayOfMonth = dateTo.getDayOfMonth() == dateTo.lengthOfMonth();
+                    boolean isLastDayOfMonth = dateTo.getDayOfMonth() == dateTo.toLocalDate().lengthOfMonth();
                     yield isLastDayOfMonth
                             ? dateTo.plusMonths(recurrenceNum).with(TemporalAdjusters.lastDayOfMonth())
                             : dateTo.plusMonths(recurrenceNum);
@@ -458,7 +451,7 @@ public class AlertServiceImpl implements AlertService {
         List<UUID> categoriesInTheAlert = alertConditionInformations.stream().map(AlertConditionInformation::getCategoryId).toList();
 
         // check if the alert is active
-        LocalDate dateNow = LocalDate.now(ZoneOffset.UTC);
+        OffsetDateTime dateNow = OffsetDateTime.now(ZoneOffset.UTC);
         boolean isActive = !dateNow.isBefore(alertEntity.getDateFrom()) && !dateNow.isAfter(alertEntity.getDateTo());
 
         // get all transactions inside the specified alert date, we need this to get only transactions inside the specified date alert is valid in
@@ -486,7 +479,7 @@ public class AlertServiceImpl implements AlertService {
         log.debug("Fetching account alerts: accountId={}, userId={}, onlyActive={}", accountId, userId, includeOnlyActiveAlerts);
         // we fetch alerts
         List<AlertEntity> alertEntities = includeOnlyActiveAlerts ?
-                alertRepository.fetchAlertsByAccountIdThatAreActive(accountId, userId, LocalDate.now(ZoneOffset.UTC)) :
+                alertRepository.fetchAlertsByAccountIdThatAreActive(accountId, userId, OffsetDateTime.now(ZoneOffset.UTC)) :
                 alertRepository.fetchAlertsByAccountId(accountId, userId);
         if(alertEntities.isEmpty()) {
             log.debug("No alerts found: accountId={}, userId={}, onlyActive={}", accountId, userId, includeOnlyActiveAlerts);
@@ -516,7 +509,7 @@ public class AlertServiceImpl implements AlertService {
 
         for(var alert: alertEntities){
             // check if the alert is active
-            LocalDate dateNow = LocalDate.now(ZoneOffset.UTC);
+            OffsetDateTime dateNow = OffsetDateTime.now(ZoneOffset.UTC);
             boolean isActive = !dateNow.isBefore(alert.getDateFrom()) && !dateNow.isAfter(alert.getDateTo());
 
             // get all transactions inside the specified alert date, we need this to get only transactions inside the specified date alert is valid in

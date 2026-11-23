@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Builder
@@ -24,11 +25,11 @@ public class AlertCreate {
     private String description;
 
     @NotNull
-    private LocalDate dateFrom;
+    private OffsetDateTime dateFrom;
 
     @NotNull
     @Future(message = "The date to, must be in the future.")
-    private LocalDate dateTo;
+    private OffsetDateTime dateTo;
 
     @NotNull
     private List<AlertConditionCreation> filtersToCreate;

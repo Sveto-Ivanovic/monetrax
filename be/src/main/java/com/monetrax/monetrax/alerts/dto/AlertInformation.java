@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,9 +22,9 @@ public class AlertInformation {
 
     private String description;
 
-    private LocalDate dateFrom;
+    private OffsetDateTime dateFrom;
 
-    private LocalDate dateTo;
+    private OffsetDateTime dateTo;
 
     private List<AlertConditionInformation> filters;
 

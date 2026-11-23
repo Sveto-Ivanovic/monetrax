@@ -323,7 +323,7 @@ public class TransactionServiceImpl implements TransactionService {
         //************************************************************************************************************************
         BigDecimal amountNative = transactionCreate.getAmount();
         BigDecimal conversionFactor;
-        if(account.getCurrency().equals(transactionCreate.getCurrency())) {
+        if(!account.getCurrency().equals(transactionCreate.getCurrency())) {
             LocalDate localDate = transactionCreate.getCustomCreationDate() == null ? LocalDate.now(ZoneOffset.UTC) : transactionCreate.getCustomCreationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate();
             FrankfurterV2Response frankfurterV2Response = frankfurterApiService.getConversionFactor(transactionCreate.getCurrency(), account.getCurrency(), localDate);
             conversionFactor = BigDecimal.valueOf(frankfurterV2Response.getRate());
