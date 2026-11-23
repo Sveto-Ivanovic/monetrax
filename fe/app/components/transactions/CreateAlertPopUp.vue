@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
-import { CalendarDate } from '@internationalized/date';
+import { CalendarDate, Time } from '@internationalized/date';
 import { apiRouter } from '~/services/serviceWrapper';
 import { useQueryClient } from '@tanstack/vue-query';
 import type { AlertCreate } from '~/services/alerts/types';
 import { zonedToUtc } from '~/utilis/timezoneUtilis/convertTimezone';
 import { getErrorMessage } from '~/utilis/getErrormessage';
+import { useUserStore } from '~/store/user';
 
 const uuid = () => crypto.randomUUID();
 
@@ -108,7 +109,12 @@ const schema = v.object({
   dateTo: v.pipe(
     v.instance(CalendarDate, 'End date of alert period is necessary')
   ),
-
+  timeFrom: v.pipe(
+    v.instance(Time, 'Time of beginning date of alert period is necessary')
+  ),
+  timeTo: v.pipe(
+    v.instance(Time, 'Time of end date of alert period is necessary')
+  ),
   // custom elements
   filtersToCreate: v.pipe(v.array(filtersToCreateSchema)),
 
@@ -130,6 +136,8 @@ const state = reactive({
 
   dateFrom: markRaw(new CalendarDate(2026, 11, 20)),
   dateTo: markRaw(new CalendarDate(2027, 11, 20)),
+  timeFrom: markRaw(new Time(0, 0, 0)),
+  timeTo: markRaw(new Time(23, 59, 59)),
 
   filtersToCreate: [
     {
@@ -170,6 +178,7 @@ const loadingBut = ref(false)
 const createAlertErr = ref('')
 const open = ref(false)
 const queryClient = useQueryClient()
+const userStore = useUserStore()
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
 
@@ -180,8 +189,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   const alertCreate: AlertCreate = {
     name: event.data.name,
-    dateFrom: event.data.dateFrom.toString(),
-    dateTo: event.data.dateTo.toString(),
+    dateFrom: zonedToUtc(`${event.data.dateFrom.toString()}T${event.data.timeFrom.toString()}`, userStore.selectedTimeZone).toISOString(),
+    dateTo: zonedToUtc(`${event.data.dateTo.toString()}T${event.data.timeTo.toString()}`, userStore.selectedTimeZone).toISOString(),
     filtersToCreate: event.data.filtersToCreate,
     description: event.data.description
   }
@@ -196,7 +205,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 
   try {
-    const res =  await createTransactionMutation.mutateAsync({ req: alertCreate, account_id: props.accountId })
+    const res = await createTransactionMutation.mutateAsync({ req: alertCreate, account_id: props.accountId })
 
     open.value = false
 
@@ -284,6 +293,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
                 </UInputDate>
               </UFormField>
 
+
+              <UFormField label="Time" name="timeFrom">
+
+                <UInputTime v-model="state.timeFrom"  :hour-cycle="24"/>
+
+              </UFormField>
+
+            </div>
+
+            <div class="modal-row">
               <UFormField label="Date To" name="dateTo">
                 <UInputDate ref="inputDate1" v-model="state.dateTo">
                   <template #trailing>
@@ -297,6 +316,12 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
                     </UPopover>
                   </template>
                 </UInputDate>
+              </UFormField>
+
+              <UFormField label="Time" name="timeTo">
+
+                <UInputTime v-model="state.timeTo" :hour-cycle="24"/>
+
               </UFormField>
             </div>
 

@@ -333,7 +333,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             </UFormField>
 
             <UFormField label="Time of Transaction" name="customCreationTime">
-              <UInputTime v-model="state.customCreationTime" />
+              <UInputTime v-model="state.customCreationTime" :hour-cycle="24"/>
             </UFormField>
           </div>
 

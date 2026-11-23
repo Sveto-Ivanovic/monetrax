@@ -3,6 +3,7 @@ import type { AlertInformation } from '~/services/alerts/types';
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { label } from '@unovis/ts/components/axis/style';
 import AlertConditionBar from './AlertConditionBar.vue'
+import { formatDateTime } from '~/utilis/formaters/dateTimeFormater.ts';
 
 
 interface Props {
@@ -79,7 +80,7 @@ function amountFor(categoryId: string): number {
 
                 <div class="alert-date-range">
                     <span class="date-range">
-                        {{ props.alertInformation?.dateFrom + ' - ' + props.alertInformation?.dateTo }}
+                        {{ formatDateTime(props.alertInformation?.dateFrom as string) + ' - ' + formatDateTime(props.alertInformation?.dateTo as string) }}
                     </span>
 
                     <UTooltip :text="props.alertInformation?.description ?? ''" :ui="{
