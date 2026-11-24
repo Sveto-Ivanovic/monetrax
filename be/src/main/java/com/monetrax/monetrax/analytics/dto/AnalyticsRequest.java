@@ -19,10 +19,10 @@ import java.util.UUID;
 public class AnalyticsRequest {
 
     @NotNull
-    private LocalDate dateFrom;
+    private OffsetDateTime dateFrom;
     @NotNull
-    private LocalDate dateTo;
-    private List<UUID> accountIds;
+    private OffsetDateTime dateTo;
+    private UUID accountId;
     @NotNull
     private GroupByTypes groupBy;
 

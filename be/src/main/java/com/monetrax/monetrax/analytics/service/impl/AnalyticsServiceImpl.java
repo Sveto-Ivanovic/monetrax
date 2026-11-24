@@ -1,6 +1,7 @@
 package com.monetrax.monetrax.analytics.service.impl;
 
 import com.monetrax.monetrax.accounts.entity.AccountEntity;
+import com.monetrax.monetrax.accounts.exceptions.NoSuchAccountFound;
 import com.monetrax.monetrax.accounts.repository.AccountRepository;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
 import com.monetrax.monetrax.analytics.dto.*;
@@ -8,6 +9,7 @@ import com.monetrax.monetrax.analytics.service.AnalyticsService;
 import com.monetrax.monetrax.categories.entity.CategoryEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.categories.repository.CategoryRepository;
+import com.monetrax.monetrax.transactions.dto.TransactionInformationPart;
 import com.monetrax.monetrax.transactions.entity.TransactionCategoriesEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionEntity;
 import com.monetrax.monetrax.transactions.entity.TransactionLineItemsEntity;
@@ -141,24 +143,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
 
-    private List<String> buildBuckets(LocalDate from, LocalDate to, GroupByTypes groupBy, DateTimeFormatter fmt) {
+    private List<String> buildBuckets(OffsetDateTime from, OffsetDateTime to, DateTimeFormatter fmt) {
         List<String> buckets = new ArrayList<>();
 
-        if(groupBy == GroupByTypes.DAY){
-            for(LocalDate fromDay = from; !fromDay.isAfter(to); fromDay = fromDay.plusDays(1))
+        for(OffsetDateTime fromDay = from; !fromDay.isAfter(to); fromDay = fromDay.plusDays(1))
                 buckets.add(fromDay.format(fmt));
-        } else if (groupBy == GroupByTypes.MONTH) {
-            YearMonth toMonth = YearMonth.from(to);
-            for(YearMonth fromMonth = YearMonth.from(from); !fromMonth.isAfter(toMonth);fromMonth= fromMonth.plusMonths(1))
-                buckets.add(fromMonth.format(fmt));
-        }else{
-            Year toYears = Year.from(to);
-            for(Year fromYears = Year.from(from); !fromYears.isAfter(toYears);fromYears= fromYears.plusYears(1))
-                buckets.add(fromYears.format(fmt));
-        }
 
-        if(buckets.size()>500){
-            throw new InvalidInputException("To many buckets present, consider shortening the date range or pick bigger group by parameter.");
+
+        if(buckets.size()>5475){
+            throw new InvalidInputException("Maximum date range is 15 years;");
         }
 
         return buckets;
@@ -167,32 +160,104 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private List<AnalyticsResponse.CategoryKindAmount> aggregateByKind(
             List<TransactionEntity> transactionEntityList,
-            CategoryKind categoryKind,
+            boolean isIncome,
             DateTimeFormatter formatter,
             List<String> buckets
 
     ){
-
-        Map<String, BigDecimal> sums =  transactionEntityList.stream()
-                .filter(x->x.getCategoryType().equals(categoryKind))
+        Map<String, BigDecimal> sums;
+        if(isIncome)
+            sums =  transactionEntityList.stream()
+                .filter(x->x.getCategoryType().equals(CategoryKind.INCOME) || x.getCategoryType().equals(CategoryKind.ADJUSTMENT_PLUS) || x.getCategoryType().equals(CategoryKind.TRANSFER_FROM))
                 .collect(
                         Collectors.groupingBy(
                                 x -> x.getCreatedAt().toLocalDate().format(formatter),
                                 Collectors.mapping(TransactionEntity::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
                         )
                 );
+        else
+            sums =  transactionEntityList.stream()
+                    .filter(x->x.getCategoryType().equals(CategoryKind.EXPENSE) || x.getCategoryType().equals(CategoryKind.ADJUSTMENT_MINUS) || x.getCategoryType().equals(CategoryKind.TRANSFER_TO))
+                    .collect(
+                            Collectors.groupingBy(
+                                    x -> x.getCreatedAt().toLocalDate().format(formatter),
+                                    Collectors.mapping(TransactionEntity::getAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                            )
+                    );
+
+        return buckets.stream()
+                        .map(x-> AnalyticsResponse.CategoryKindAmount.builder()
+                                .amount(sums.getOrDefault(x, BigDecimal.ZERO)).categoryKind(isIncome? CategoryKind.INCOME : CategoryKind.EXPENSE)
+                                .xAxisData(x)
+                                .build()).toList();
+
+    }
+
+    private Map<String, List<AnalyticsResponse.CategoryState>> mapDatesToCategoryStates( Set<CategoryEntity> categoryEntitiesSet,
+                                                                                         Map<UUID, List<TransactionCategoriesEntity>> transactionCategoriesEntityMap,
+                                                                                         List<String> buckets) {
+
+        Map<String, List<AnalyticsResponse.CategoryState>> resp = new LinkedHashMap<>();
+        for(String bucket: buckets){
+            List<AnalyticsResponse.CategoryState> categoryStateList = new ArrayList<>();
+            for(CategoryEntity categoryEntity: categoryEntitiesSet){
+
+                UUID categoryId = categoryEntity.getCategoryId();
+                String name = categoryEntity.getName();
+
+                // get all transactions that use this category
+                List<TransactionCategoriesEntity> transactionCategoriesEntityList1 = transactionCategoriesEntityMap.get(categoryId).stream()
+                        .filter(x->x.getTransaction().getCreatedAt().toLocalDate().toString().equals(bucket)).toList();
+
+
+                if (transactionCategoriesEntityList1.isEmpty()) {
+                    throw new IllegalStateException(
+                            "No transactions found for category: " + categoryId
+                    );
+                }
+
+                BigDecimal amountT = transactionCategoriesEntityList1.stream()
+                        .map(x->x.getTransaction().getAmount())
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                categoryStateList.add(AnalyticsResponse.CategoryState.builder().amount(amountT).categoryId(categoryId).categoryName(name).build());
+            }
+
+            resp.put(bucket, categoryStateList);
+
+        }
+
+
+        return resp;
+    }
 
 
 
-                return buckets.stream()
-                        .map(x->{
+    private Map<String, List<AnalyticsResponse.Products>> mapDatesToProductStates( List<TransactionLineItemsEntity> transactionLineItemsEntities,
+                                                                                         List<String> buckets) {
 
-                            return  AnalyticsResponse.CategoryKindAmount.builder()
-                                    .amount(sums.getOrDefault(x, BigDecimal.ZERO)).categoryKind(categoryKind)
-                                    .xAxisData(x)
-                                    .build();
-                        }).toList();
+        Map<String, List<AnalyticsResponse.Products>> resp = new LinkedHashMap<>();
+        for(String bucket: buckets){
+            List<AnalyticsResponse.Products> productStateList = new ArrayList<>();
+            Set<String> uniqueNamesOfProducts = transactionLineItemsEntities.stream().map(TransactionLineItemsEntity::getProductName).collect(Collectors.toSet());
 
+            for(var prodName: uniqueNamesOfProducts){
+                BigDecimal sumOfCost = transactionLineItemsEntities.stream().filter(x->x.getProductName().equals(prodName) && x.getTransaction()
+                                .getCreatedAt().toLocalDate().toString().equals(bucket))
+                        .map(TransactionLineItemsEntity::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                int numberOfPurchases =(int)transactionLineItemsEntities.stream().filter(x->x.getProductName().equals(prodName) && x.getTransaction()
+                        .getCreatedAt().toLocalDate().toString().equals(bucket)).count();
+                productStateList.add(AnalyticsResponse.Products.builder().productName(prodName).amount(sumOfCost).numberOfPurchases(numberOfPurchases).build());
+            }
+
+
+            resp.put(bucket, productStateList);
+
+        }
+
+
+        return resp;
     }
 
     @Override
@@ -208,132 +273,139 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         });
 
         // get accounts of interest
-        List<AccountEntity> accountEntityList;
-        if(analyticsRequest.getAccountIds()==null || analyticsRequest.getAccountIds().isEmpty()) {
-            accountEntityList = accountRepository.getAllAccounts(userId);
-        }
-        else{
-            accountEntityList = accountRepository.getAllAccountsByAccountIds(userId, analyticsRequest.getAccountIds());
-        }
+        AccountEntity accountEntity = accountRepository.getAccount(userId, analyticsRequest.getAccountId()).orElseThrow(()->{
+            log.warn("No account found with id={}", analyticsRequest.getAccountId());
+            return new NoSuchAccountFound("No account with id: " + analyticsRequest.getAccountId());
+        });
 
-        if(accountEntityList.isEmpty()){
-            throw  new IllegalStateException("No accounts found for analytics");
-        }
 
         // extract the variables of interest
-        OffsetDateTime dateFrom = analyticsRequest.getDateFrom().atStartOfDay().atOffset(ZoneOffset.UTC);
-        OffsetDateTime dateTo = analyticsRequest.getDateTo().plusDays(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-        GroupByTypes groupByType = analyticsRequest.getGroupBy();
-
-        DateTimeFormatter formatter = switch (groupByType) {
-            case DAY -> DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            case MONTH -> DateTimeFormatter.ofPattern("yyyy-MM");
-            default -> DateTimeFormatter.ofPattern("yyyy");
-        };
-
-        List<String> buckets = buildBuckets(analyticsRequest.getDateFrom(), analyticsRequest.getDateTo(), groupByType, formatter);
-
-        List<AnalyticsResponse.AccountTransactionsByCategoryKindAndCategoryAggregated> perAccount = new ArrayList<>();
-        for(var account : accountEntityList){
-
-            UUID accountId = account.getAccountId();
-            List<TransactionEntity> transactionEntityList = transactionRepository.fetchUserTransactionsInsideSpecifiedDate(userId, accountId, dateFrom, dateTo);
-            if(transactionEntityList.isEmpty())
-                continue;
-            // all transaction ids used
-            List<UUID> transactionIds = transactionEntityList.stream().map(TransactionEntity::getTransactionId).toList();
+        OffsetDateTime dateFrom = analyticsRequest.getDateFrom();
+        OffsetDateTime dateTo = analyticsRequest.getDateTo();
 
 
-            List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIdsInWithJoin(transactionIds);
-            // map category ids to list of transactionCategories
-            Map<UUID, List<TransactionCategoriesEntity>> transactionCategoriesEntityMap = transactionCategoriesEntityList.stream()
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        List<String> buckets = buildBuckets(dateFrom, dateTo, formatter);
+
+        UUID accountId = accountEntity.getAccountId();
+        List<TransactionEntity> transactionEntityList = transactionRepository.fetchUserTransactionsInsideSpecifiedDate(userId, accountId, dateFrom, dateTo);
+
+        if(transactionEntityList.isEmpty())
+                return AnalyticsResponse.builder().accountId(accountId).accountName(accountEntity.getName())
+                        .state(accountEntity.getCurrentBalance()).currency(accountEntity.getCurrency())
+                        .incomeTotal(BigDecimal.ZERO).expenseTotal(BigDecimal.ZERO).net(BigDecimal.ZERO)
+                        .income(new ArrayList<>()).expense(new ArrayList<>())
+                        .categoryStateListExpense(new ArrayList<>()).categoryStateListIncome(new ArrayList<>()).transactionInformationPartList(new ArrayList<>()).productsList(new ArrayList<>())
+                        .mapDateAmountIncome(new LinkedHashMap<>()).mapDateAmountExpense(new LinkedHashMap<>()).mapDateAmountNet(new LinkedHashMap<>())
+                        .stringListMapCategoriesByDate(new LinkedHashMap<>()).stringListMapProductByDate(new LinkedHashMap<>()).build();
+
+
+        // all transaction ids used
+        List<UUID> transactionIds = transactionEntityList.stream().map(TransactionEntity::getTransactionId).toList();
+        List<TransactionCategoriesEntity> transactionCategoriesEntityList = transactionCategoriesRepository.fetchAllTransactionCategoryIdsInWithJoin(transactionIds);
+
+        // map category ids to list of transactionCategories
+        Map<UUID, List<TransactionCategoriesEntity>> transactionCategoriesEntityMap = transactionCategoriesEntityList.stream()
                     .collect(Collectors.groupingBy( x->x.getId().getCategoryId(), Collectors.mapping(x->x, Collectors.toList()) ));
 
+        // map transaction ids to the list of category names
+        Map<UUID, List<String>> mapTransactionIdsToListOfCategoryNames = transactionCategoriesEntityList.stream()
+                .collect(Collectors.groupingBy(x->x.getTransaction().getTransactionId(), Collectors.mapping(x->x.getCategory().getName(), Collectors.toList())));
 
+        // Unique Categories used
+        Set<CategoryEntity> categoryEntitiesSet = transactionCategoriesEntityList.stream().map(TransactionCategoriesEntity::getCategory).collect(Collectors.toSet());
 
-            // Unique Categories in used
-            Set<CategoryEntity> categoryEntitiesSet = transactionCategoriesEntityList.stream().map(TransactionCategoriesEntity::getCategory).collect(Collectors.toSet());
+        // the category type vals, first 5 fields in analytics !!!
+        List<AnalyticsResponse.CategoryKindAmount> income = aggregateByKind(transactionEntityList, true, formatter, buckets);
+        List<AnalyticsResponse.CategoryKindAmount> expense = aggregateByKind(transactionEntityList, false, formatter, buckets);
+        BigDecimal incomeTotal = income.stream().map(AnalyticsResponse.CategoryKindAmount::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal expenseTotal = expense.stream().map(AnalyticsResponse.CategoryKindAmount::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal net = incomeTotal.subtract(expenseTotal);
 
+        // we go through unique categories used here, nexy 2 fields !!!
+        List<AnalyticsResponse.CategoryState> categoryStateListExpense = new ArrayList<>();
+        List<AnalyticsResponse.CategoryState> categoryStateListIncome= new ArrayList<>();
 
-            // the category type vals
-            List<AnalyticsResponse.CategoryKindAmount> income = aggregateByKind(transactionEntityList,CategoryKind.INCOME, formatter, buckets);
-            List<AnalyticsResponse.CategoryKindAmount> expense = aggregateByKind(transactionEntityList,CategoryKind.EXPENSE, formatter, buckets);
-            List<AnalyticsResponse.CategoryKindAmount> transferFrom =aggregateByKind(transactionEntityList,CategoryKind.TRANSFER_FROM, formatter, buckets);
-            List<AnalyticsResponse.CategoryKindAmount> transferTo = aggregateByKind(transactionEntityList,CategoryKind.TRANSFER_TO, formatter, buckets);
-            List<AnalyticsResponse.CategoryKindAmount> adjustmentPlus = aggregateByKind(transactionEntityList,CategoryKind.ADJUSTMENT_PLUS, formatter, buckets);
-            List<AnalyticsResponse.CategoryKindAmount> adjustmentMinus = aggregateByKind(transactionEntityList,CategoryKind.ADJUSTMENT_MINUS, formatter, buckets);
+        for(var category : categoryEntitiesSet){
+            UUID categoryId = category.getCategoryId();
+            String name = category.getName();
 
-            // we go through unique categories used here
-             List<AnalyticsResponse.CategoryAmount> categoryKindAmmountListList = new ArrayList<>();
-             List<UUID> uniqueCategoryIds = new ArrayList<>();
-             List<String> uniqueCategoryNames = new ArrayList<>();
+            // get all transactions that use this category
+            List<TransactionCategoriesEntity> transactionCategoriesEntityList1 = transactionCategoriesEntityMap.get(categoryId);
+            BigDecimal amountT = transactionCategoriesEntityList1.stream()
+                    .map(x->x.getTransaction().getAmount())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            for(var category : categoryEntitiesSet){
-                UUID categoryId = category.getCategoryId();
-                String name = category.getName();
+            if(category.getCategoryType() == CategoryKind.EXPENSE || category.getCategoryType() == CategoryKind.ADJUSTMENT_MINUS || category.getCategoryType() == CategoryKind.TRANSFER_TO)
+                categoryStateListExpense.add(AnalyticsResponse.CategoryState.builder().amount(amountT).categoryId(categoryId).categoryName(name).build());
+            else
+                categoryStateListIncome.add(AnalyticsResponse.CategoryState.builder().amount(amountT).categoryId(categoryId).categoryName(name).build());
+        }
 
-                // get all transactions that use this category
-                List<TransactionCategoriesEntity> transactionCategoriesEntityList1 = transactionCategoriesEntityMap.get(categoryId);
-
-                // map of dates and sums
-                Map<String, BigDecimal> sum = transactionCategoriesEntityList1.stream()
-                                .collect(Collectors.groupingBy(
-                                        x -> x.getTransaction().getCreatedAt().toLocalDate().format(formatter),
-                                        Collectors.mapping(x->x.getTransaction().getAmount(), Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
-                                        ));
-
-                // add buckets and sort
-                Map<String, BigDecimal> mapOfSums = buckets.stream()
-                        .collect(Collectors.toMap(x->x, x-> sum.get(x) == null? BigDecimal.ZERO : sum.get(x), (a,b)->b, LinkedHashMap::new));
-
-                categoryKindAmmountListList.add(AnalyticsResponse.CategoryAmount.builder().categoryName(name)
-                        .categoryId(categoryId)
-                        .amount(mapOfSums.values().stream().toList())
-                        .xAxisData(mapOfSums.keySet().stream().toList()).build());
-
-                uniqueCategoryIds.add(categoryId);
-                uniqueCategoryNames.add(name);
-            }
+        // fifth field
+        List<TransactionInformationPart> transactionInformationPartList = transactionEntityList.stream().map(
+                x->TransactionInformationPart.builder().transactionId(x.getTransactionId()).name(x.getName()).description(x.getDescription())
+                        .amount(x.getAmount()).currency(accountEntity.getCurrency()).categoryType(x.getCategoryType())
+                        .createdAt(x.getCreatedAt()).categories(mapTransactionIdsToListOfCategoryNames.get(x.getTransactionId())).build()
+        ).toList();
 
 
 
-            // finally products
-            List<AnalyticsResponse.Products> productsList = new ArrayList<>();
-            List<TransactionLineItemsEntity> transactionLineItemsEntities = transactionLineItemsRepository.fetchAllTransactionsLineProductsWithIn(transactionIds);
+        // products, 6th field
+        List<AnalyticsResponse.Products> productsList = new ArrayList<>();
+        List<TransactionLineItemsEntity> transactionLineItemsEntities = transactionLineItemsRepository.fetchAllTransactionsLineProductsWithIn(transactionIds);
 
-            // set of unique product names
-            Set<String> uniqueNamesOfProducts = transactionLineItemsEntities.stream().map(TransactionLineItemsEntity::getProductName).collect(Collectors.toSet());
-            for(var prodName: uniqueNamesOfProducts){
+        // set of unique product names
+        Set<String> uniqueNamesOfProducts = transactionLineItemsEntities.stream().map(TransactionLineItemsEntity::getProductName).collect(Collectors.toSet());
+        for(var prodName: uniqueNamesOfProducts){
                 BigDecimal sumOfCost = transactionLineItemsEntities.stream().filter(x->x.getProductName().equals(prodName))
                         .map(TransactionLineItemsEntity::getAmount)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 int numberOfPurchases =(int)transactionLineItemsEntities.stream().filter(x->x.getProductName().equals(prodName)).count();
                 productsList.add(AnalyticsResponse.Products.builder().productName(prodName).amount(sumOfCost).numberOfPurchases(numberOfPurchases).build());
-            }
-
-
-
-            // finally we insert these inputs into list of account specific metrics
-            perAccount.add(AnalyticsResponse.AccountTransactionsByCategoryKindAndCategoryAggregated.builder()
-                    .accountId(accountId)
-                    .accountName(account.getName())
-                    .state(account.getCurrentBalance())
-                    .income(income)
-                    .expense(expense)
-                    .transferFrom(transferFrom)
-                    .transferTo(transferTo)
-                    .adjustmentPlus(adjustmentPlus)
-                    .adjustmentMinus(adjustmentMinus)
-                    .categoryKindAmmountListList(categoryKindAmmountListList)
-                    .uniqueCategoryIds(uniqueCategoryIds)
-                    .uniqueCategoryNames(uniqueCategoryNames)
-                    .productsList(productsList)
-                    .build());
-
         }
 
+        // field 10 11 12
+        Map<String, BigDecimal> mapDateAmountIncome = income.stream().collect(Collectors.toMap(AnalyticsResponse.CategoryKindAmount::getXAxisData,
+                AnalyticsResponse.CategoryKindAmount::getAmount,
+                BigDecimal::add,
+                LinkedHashMap::new));
+        Map<String, BigDecimal> mapDateAmountExpense = expense.stream().collect(Collectors.toMap(AnalyticsResponse.CategoryKindAmount::getXAxisData,
+                AnalyticsResponse.CategoryKindAmount::getAmount,
+                BigDecimal::add,
+                LinkedHashMap::new));
 
-        return AnalyticsResponse.builder().listOfTransactionsByCategoryKindAggregated(perAccount).build();
+        Map<String, BigDecimal> mapDateAmountNet = income.stream().collect(Collectors.toMap(AnalyticsResponse.CategoryKindAmount::getXAxisData, x->x.getAmount().subtract(mapDateAmountExpense.get(x.getXAxisData())),   BigDecimal::add,
+                LinkedHashMap::new ));
+
+
+
+        //  last two fields
+         Map<String, List<AnalyticsResponse.CategoryState>> stringListMapCategoriesByDate = mapDatesToCategoryStates(categoryEntitiesSet,transactionCategoriesEntityMap,buckets);
+        Map<String, List<AnalyticsResponse.Products>> stringListMapProductByDate =mapDatesToProductStates(transactionLineItemsEntities, buckets);
+
+
+
+
+        return AnalyticsResponse.builder().accountId(accountId)
+                .accountName(accountEntity.getName())
+                .state(accountEntity.getCurrentBalance())
+                .currency(accountEntity.getCurrency())
+                .incomeTotal(incomeTotal)
+                .expenseTotal(expenseTotal)
+                .net(net)
+                .income(income)
+                .expense(expense)
+                .categoryStateListExpense(categoryStateListExpense)
+                .categoryStateListIncome(categoryStateListIncome)
+                .transactionInformationPartList(transactionInformationPartList)
+                .productsList(productsList)
+                .mapDateAmountIncome(mapDateAmountIncome)
+                .mapDateAmountExpense(mapDateAmountExpense)
+                .mapDateAmountNet(mapDateAmountNet)
+                .stringListMapCategoriesByDate(stringListMapCategoriesByDate)
+                .stringListMapProductByDate(stringListMapProductByDate)
+                .build();
     }
 
     @Override
@@ -370,7 +442,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         // inside the for loop we first decide current date then date - 3 years meaning with the current one 4 years worth of data
         // then we extract the income related and expense related transactions and group them by months
-        // then we padd the missing dates with 0s
+        // then we pad the missing dates with 0s
         // balance is calculated => balance = (balance + 1 month) - (income + 1 month) + (expense + 1 month)
         for(AccountEntity account : accountEntityList){
             Year currentYear = Year.now(ZoneOffset.UTC);
@@ -387,9 +459,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
             List<MonthlyBalance> transactionEntityListIncome = transactionRepository.findMonthlyAmountsByMonth(account.getAccountId(),
                    fromDate, List.of(CategoryKind.INCOME,CategoryKind.ADJUSTMENT_PLUS, CategoryKind.TRANSFER_FROM));
+            transactionEntityListIncome.forEach(
+                    x->x.setCurrency(account.getCurrency())
+            );
 
             List<MonthlyBalance> transactionEntityListExpense = transactionRepository.findMonthlyAmountsByMonth(account.getAccountId(),
                     fromDate, List.of(CategoryKind.EXPENSE,CategoryKind.ADJUSTMENT_MINUS, CategoryKind.TRANSFER_TO));
+            transactionEntityListExpense.forEach(
+                    x->x.setCurrency(account.getCurrency())
+            );
 
 
             List<MonthlyIncome> transactionEntityListIncomeCleaned = fillMissingMonthsIncome(transactionEntityListIncome, start, end);
