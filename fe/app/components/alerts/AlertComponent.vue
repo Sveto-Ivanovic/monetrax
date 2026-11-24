@@ -4,11 +4,14 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { label } from '@unovis/ts/components/axis/style';
 import AlertConditionBar from './AlertConditionBar.vue'
 import { formatDateTime } from '~/utilis/formaters/dateTimeFormater.ts';
+import { apiRouter } from '~/services/serviceWrapper.ts';
+import { useQueryClient } from '@tanstack/vue-query';
 
 
 interface Props {
     alertInformation: AlertInformation | null,
-    currency: string
+    currency: string,
+    accountId: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -17,28 +20,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 
-const items = ref<DropdownMenuItem[][]>([
-    [
-        {
-            label: "Delete Alert",
-            type: "label",
-            onSelect: () => {
-                console.log("Deleting alert with id:" + props.alertInformation?.alertId)
-
-
-
-            }
-        },
-        {
-            label: "Edit Alert",
-            type: "label",
-            to: '/alerts/' + props.alertInformation?.alertId
-        },
-    ],
-
-
-
-])
 
 
 function amountFor(categoryId: string): number {
@@ -46,7 +27,34 @@ function amountFor(categoryId: string): number {
   return state ? state.amount : 0
 }
 
-
+const deleteAlertMutation = apiRouter.alertApi().deleteAlert()
+const queryClient = useQueryClient()
+const items = computed<DropdownMenuItem[][]>(() => [
+  [
+    {
+      label: 'Edit Alert',
+      icon: 'i-lucide-pencil',
+      to: '/alerts/' + props.alertInformation?.alertId
+    },
+    {
+      label: 'Delete Alert',
+      icon: 'i-lucide-trash',
+      color: 'error',
+      async onSelect() {
+        const alertId = props.alertInformation?.alertId
+        if (!alertId) return
+        try {
+          await deleteAlertMutation.mutateAsync({ alertId })
+          await queryClient.invalidateQueries({
+            queryKey: ['account', 'get', props.accountId, 'transactions']
+          })
+        } catch (err) {
+          console.log(err)
+        }
+      }
+    }
+  ]
+])
 </script>
 
 <template>

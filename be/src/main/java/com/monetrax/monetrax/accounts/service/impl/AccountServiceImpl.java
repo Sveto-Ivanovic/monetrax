@@ -135,7 +135,7 @@ public class AccountServiceImpl implements AccountService {
         });
 
         account.setArchived(archived);
-        account.setActive(false);
+        account.setActive(archived);
         AccountEntity accountEntity = accountRepository.save(account);
         log.info("Account archived={} (deactivated): userId={}, accountId={}", archived, userId, accountId);
         return accountMapper.fromAccountEntityToAccountInformation(accountEntity);

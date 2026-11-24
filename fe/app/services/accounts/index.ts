@@ -30,13 +30,25 @@ export function accountManagementApi() {
                     method: "GET",
                     credentials: "omit"
                 }
-            )
+            ),
+        archiveAcc: (archive: boolean, accountId: string) => $customFetch<AccountInformation>("/accounts/account/"+accountId+"/update/archive", {
+             method: 'PATCH',
+            body: {archived: archive},
+            credentials: 'omit'
+        })
     }
 
     function createAccount() {
         return useMutation<AccountInformation, FetchError, AccountCreate>({
             mutationKey: ['create', 'account'],
             mutationFn: (req: AccountCreate) => api.createAcc(req),
+        })
+    }
+
+    function archiveAccount() {
+        return useMutation<AccountInformation, FetchError, {accountId: string, archive: boolean}>({
+            mutationKey: ['archive', 'account'],
+            mutationFn: (req: {accountId: string, archive: boolean}) => api.archiveAcc(req.archive, req.accountId),
         })
     }
 
@@ -59,6 +71,7 @@ export function accountManagementApi() {
     return {
         createAccount,
         fetchAccount,
-        fetchAccounts
+        fetchAccounts,
+        archiveAccount
     }
 }

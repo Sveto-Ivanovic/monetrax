@@ -14,6 +14,10 @@ export function accountAlertManagementApi() {
             body: req,
             credentials: 'omit'
         }),
+        deleteAlert: (alertId: string) => $customFetch<AlertCreateUpdateDeleteResponse>(`/alerts/alert/${alertId}/delete`, {
+            method: 'DELETE',
+            credentials: 'omit'
+        }),
     }
 
 function createAlert() {
@@ -27,7 +31,17 @@ function createAlert() {
     })
 }
 
+function deleteAlert() {
+    return useMutation<
+        AlertCreateUpdateDeleteResponse,               
+        FetchError,                                    
+        { alertId: string } 
+    >({
+        mutationKey: ['delete', 'alerts'],
+        mutationFn: (vars) => api.deleteAlert(vars.alertId),
+    })
+}
 
     return {
-    createAlert    }
+    createAlert, deleteAlert    }
 }

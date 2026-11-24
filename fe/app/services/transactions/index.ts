@@ -20,6 +20,10 @@ export function accountTransactionManagementApi() {
         getAccTransactions: (account_id: string) => $customFetch<ListOfAccountTransactions>(`/transactions/account/${account_id}/fetch`, {
             method: 'GET',
             credentials: 'omit'
+        }),
+        deleteTransaction: (transactionId: string)=> $customFetch<TransactionCreateUpdateResponse>(`/transactions/transaction/${transactionId}/delete`,{
+           method: 'DELETE',
+            credentials: 'omit' 
         })
     }
 
@@ -43,8 +47,20 @@ function createTransaction() {
     }
 
 
+    function deleteTransaction() {
+        return useMutation<
+            TransactionCreateUpdateResponse,
+            FetchError,
+            { transactionId: string; }
+        >({
+            mutationKey: ['delete', 'transaction'],
+            mutationFn: (vars) => api.deleteTransaction(vars.transactionId)
+        })
+    }
+
     return {
     fetchAccountTransactions,
-    createTransaction
+    createTransaction,
+    deleteTransaction
     }
 }

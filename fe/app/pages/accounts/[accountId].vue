@@ -17,6 +17,8 @@ import CreateAlertPopUp from '~/components/transactions/CreateAlertPopUp.vue'
 import { apiRouter } from '~/services/serviceWrapper'
 import { getErrorMessage } from '~/utilis/getErrormessage'
 import AppLoading from '~/components/loading/AppLoading.vue'
+import { accountManagementApi } from '~/services/accounts'
+import { QueryClient, useQueryClient } from '@tanstack/vue-query'
 
 
 const route = useRoute()
@@ -33,10 +35,6 @@ const errorMessage = computed(() =>
     error.value ? getErrorMessage(error.value) : ""
 );
 
-
-function handleArchive(accountId: string, active: boolean) {
-
-}
 
 
 const userStore = useUserStore()
@@ -432,13 +430,25 @@ const existingCategories = computed(()=>{
 const columns = computed<TableColumn<ColTypes>[]>(() =>
     getTransactionColumns(getRowItems, accountTransactions.value?.account.currency ?? 'EUR', userStore.selectedTimeZone, existingCategories.value)
 )
+
+const transactionDeleteMutation = apiRouter.transactionApi().deleteTransaction()
 function getRowItems(row: TableRow<ColTypes>): DropdownMenuItem[] {
     return [
         { type: 'label', label: 'Actions' },
         {
             label: 'Delete Transaction',
-            onSelect() {
-                console.log('Deleted transaction', row.original.name)
+            async onSelect() {
+                console.log('Deleting transaction', row.original.name)
+
+                try{
+                    await transactionDeleteMutation.mutateAsync({transactionId: row.original.transactionId})
+                       
+                  await queryClient.invalidateQueries({queryKey: ['account', 'get', accountId, 'transactions']})
+                } catch(err){
+                    console.log(err)
+                }
+
+
             },
         },
         {
@@ -489,6 +499,26 @@ const alerts = computed<{
     }
 
 })
+
+const queryClient = useQueryClient()
+const archiveAccountMutation = apiRouter.accountApi().archiveAccount() 
+const loadingArchive = ref(false)
+async function handleArchive(accountId: string, active: boolean) {
+    loadingArchive.value=true
+    console.log("Active: "+ active)
+    try{
+        await archiveAccountMutation.mutateAsync({accountId:accountId, archive: !active})
+        queryClient.invalidateQueries({queryKey: ['account', 'get', accountId.toString(), 'transactions']})
+    } catch(error){
+        console.log(error)
+    } finally {
+            loadingArchive.value=false
+
+    }
+    
+
+
+}
 
 
 definePageMeta({
@@ -549,6 +579,7 @@ definePageMeta({
                 </div>
                 <div class="archive-analytics">
                     <UButton
+                        :loading="loadingArchive"
                         @click="handleArchive(accountTransactions?.account?.accountId ?? '', accountTransactions?.account?.active ?? true)"
                         :class="accountTransactions?.account.active ? 'acc-inf-arch' : 'acc-inf-unarch'">{{
                             accountTransactions?.account.active ? 'Archive' : 'Unarchive' }}</UButton>
@@ -707,7 +738,7 @@ definePageMeta({
                 <div class="alert-list">
                     <div v-for="value in alerts.alertsSorted" :key="value.alertId"
                         :class="value.breached ? 'alert-border-breached' : 'alert-border-normal'">
-                        <AlertComponent :alert-information="value"
+                        <AlertComponent :alert-information="value" :account-id="accountId"
                             :currency="accountTransactions?.account?.currency ?? 'EUR'" />
                     </div>
                     <div class="no-alerts" v-if="alerts.alertsSorted.length===0">
