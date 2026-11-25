@@ -78,7 +78,7 @@ public class AccountServiceImpl implements AccountService {
             log.warn("Cannot create account, user not found: userId={}", userId);
             return new NoSuchUserExistsException("No user with id: "+ userId);
         });
-        if(accountCreate.getCurrency() != "EUR"){
+        if(!accountCreate.getCurrency().equals("EUR")){
             throw new InvalidInputException("For now accounts with EUR are only allowed");
         }
 
@@ -135,7 +135,7 @@ public class AccountServiceImpl implements AccountService {
         });
 
         account.setArchived(archived);
-        account.setActive(false);
+        account.setActive(archived);
         AccountEntity accountEntity = accountRepository.save(account);
         log.info("Account archived={} (deactivated): userId={}, accountId={}", archived, userId, accountId);
         return accountMapper.fromAccountEntityToAccountInformation(accountEntity);

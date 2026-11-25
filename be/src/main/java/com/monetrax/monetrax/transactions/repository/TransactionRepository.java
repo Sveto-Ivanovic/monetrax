@@ -21,7 +21,7 @@ import java.util.UUID;
 @Repository
 public interface TransactionRepository extends JpaRepository<TransactionEntity, UUID> {
 
-    @Query("select t from TransactionEntity t where t.transactionId = ?1 or t.user.userId = ?2")
+    @Query("select t from TransactionEntity t where t.transactionId = ?1 and t.user.userId = ?2")
     public Optional<TransactionEntity> fetchUserTransaction(UUID transactionId, UUID userId);
 
     @Query("select t from TransactionEntity t where t.account.accountId = ?1")
@@ -30,8 +30,12 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     @Query("select t from TransactionEntity t where t.user.userId = ?1")
     public List<TransactionEntity> fetchAllUserTransactions(UUID userId);
 
-    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt < ?4")
+    @Query("select t from TransactionEntity t where t.user.userId = ?1 and t.account.accountId = ?2 and  t.createdAt >= ?3 and  t.createdAt <= ?4")
     public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDate(UUID userId, UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
+
+    @Query("select t from TransactionEntity t where  t.account.accountId = ?1 and  t.createdAt >= ?2 and  t.createdAt <= ?3")
+    public List<TransactionEntity> fetchUserTransactionsInsideSpecifiedDateForAccount( UUID accountId, OffsetDateTime dateFrom, OffsetDateTime dateTo);
+
 
     @Query("select t from TransactionEntity t join fetch t.user join fetch t.account where t.transactionId in ?1")
     public List<TransactionEntity> fetchTransactionsForScheduler(List<UUID> transactionIds);
@@ -50,7 +54,7 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     """)
     List<MonthlyBalance> findMonthlyAmountsByMonth(UUID id, OffsetDateTime from, List<CategoryKind> categoryKindList);
 
-    @Query("select t from TransactionEntity t where t.user.userId = ?1 order by t.createdAt desc")
+    @Query("select t from TransactionEntity t join fetch t.account where t.user.userId = ?1 order by t.createdAt desc")
     List<TransactionEntity> findRecentTransactions(UUID userId, Pageable pageable);
 
     @Query("select t from TransactionEntity t join fetch t.account where t.user.userId = ?1 and t.createdAt >= ?2 and t.createdAt <= ?3")

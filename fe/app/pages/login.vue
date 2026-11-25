@@ -113,7 +113,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     const response = await loginUserMutation.mutateAsync(loginData)
     console.log('Login successful:', response)
-    navigateTo('/dashboard')
+    await navigateTo('/dashboard')
   } catch (error) {
     console.error('Login failed:', error)
     if (error instanceof FetchError) {

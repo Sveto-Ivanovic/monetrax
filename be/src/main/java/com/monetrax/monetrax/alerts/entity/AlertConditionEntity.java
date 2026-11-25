@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -35,7 +37,8 @@ public class AlertConditionEntity {
     private String categoryName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "rule_type", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "rule_type")
     private RuleType ruleType;
 
     @Column(name = "limit_value_low_or_equal", nullable = false, precision = 14, scale = 2)

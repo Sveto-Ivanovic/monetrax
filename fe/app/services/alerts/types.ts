@@ -39,3 +39,35 @@ export interface AlertInformation {
   breached: boolean
   active: boolean
 }
+export interface AlertCreateUpdateDeleteResponse {
+  msg: string;
+  id: string;
+}
+
+export type RecurrenceRuleType =
+  | "EVERY_WEEK"
+  | "EVERY_MONTH"
+  | "EVERY_YEAR"
+  | "EVERY_SPAN";
+
+export interface AlertRecurrenceRule {
+  numberOfOccurrences: number;
+  ruleType: RecurrenceRuleType;
+  recurrenceNum: number;
+}
+
+export interface AlertConditionCreation {
+  categoryId: string;
+  ruleType: RuleType;
+  limitValueLowOrEqual?: number;
+  limitValueHigh?: number;
+}
+
+export interface AlertCreate {
+  name: string;
+  description?: string;
+  dateFrom: string;
+  dateTo: string;
+  filtersToCreate: AlertConditionCreation[];
+  alertRecurrenceRule?: AlertRecurrenceRule;
+}

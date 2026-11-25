@@ -1,6 +1,7 @@
 package com.monetrax.monetrax.analytics.dto;
 
 import com.monetrax.monetrax.categories.entity.CategoryKind;
+import com.monetrax.monetrax.transactions.dto.TransactionInformationPart;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -17,31 +19,35 @@ import java.util.UUID;
 @Builder
 public class AnalyticsResponse {
 
-    private List<AccountTransactionsByCategoryKindAndCategoryAggregated>  listOfTransactionsByCategoryKindAggregated;
-
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static class AccountTransactionsByCategoryKindAndCategoryAggregated{
         private UUID accountId;
         private String accountName;
         private BigDecimal state;
+        private String currency;
+
+
+        // specific to the pure analytics part not the comparison part of the page
+        private BigDecimal incomeTotal;
+        private BigDecimal expenseTotal;
+        private BigDecimal net;
 
         private List<CategoryKindAmount> income;
         private List<CategoryKindAmount> expense;
-        private List<CategoryKindAmount> transferFrom;
-        private List<CategoryKindAmount> transferTo;
-        private List<CategoryKindAmount> adjustmentPlus;
-        private List<CategoryKindAmount> adjustmentMinus;
 
-        private List<CategoryAmount> categoryKindAmmountListList;
-        private List<UUID> uniqueCategoryIds;
-        private List<String> uniqueCategoryNames;
+        private List<CategoryState> categoryStateListExpense;
+        private List<CategoryState> categoryStateListIncome;
 
+        private List<TransactionInformationPart> transactionInformationPartList;
         private List<Products> productsList;
-    }
+
+
+        // comparison part, all strings down, in the map, the keys specifically are local date with months days and year
+        private Map<String, BigDecimal> mapDateAmountIncome;
+        private Map<String, BigDecimal> mapDateAmountExpense;
+        private Map<String, BigDecimal> mapDateAmountNet;
+
+        private Map<String, List<CategoryState>> stringListMapCategoriesByDate;
+        private Map<String, List<Products>> stringListMapProductByDate;
+
 
     @Data
     @AllArgsConstructor
@@ -51,22 +57,11 @@ public class AnalyticsResponse {
        private CategoryKind categoryKind;
        private  BigDecimal amount;
        // depending on group by
-       // YearMonth → 2026-10
-       // Year → 2026
        // LocalDate → 2026-10-02
        private String xAxisData;
     }
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @Builder
-    public static  class CategoryAmount{
-        private String categoryName;
-        private UUID categoryId;
-        private List<BigDecimal> amount;
-        private List<String> xAxisData;
-    }
+
 
     @Data
     @AllArgsConstructor
@@ -80,7 +75,15 @@ public class AnalyticsResponse {
 
 
 
-
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static  class CategoryState{
+        private String categoryName;
+        private UUID categoryId;
+        private BigDecimal amount;
+    }
 
 
 

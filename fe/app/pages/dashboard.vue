@@ -1,5 +1,13 @@
 <template>
-  <div class="dashboard">
+  <AppLoading v-if="isLoading" />
+
+  <div v-else-if="isError" class="dashboard-error">
+    <p class="dashboard-error-title">Couldn't load analytics</p>s
+    <p class="dashboard-error-message">{{ errorMessage }}</p>
+    <UButton @click="refetch()">Retry</UButton>
+  </div>
+
+  <div v-else-if="dataDash" class="dashboard">
 
     <div class="welcome-header">
       <div class="date-time-now">
@@ -173,7 +181,7 @@
 
 
         <div class="as-footer" style="width: 100%; padding-top: 32px;">
-          <NuxtLink to="/accounts/createAcc" class="view-all-accs">+ Add an account</NuxtLink>
+          <NuxtLink to="/accounts" class="view-all-accs">+ Add an account</NuxtLink>
         </div>
 
       </div>
@@ -193,8 +201,8 @@
         <div class="latest-transactions">
 
 
-          <div v-if="fetchedTemplateTest.latestFiveTransactions?.length > 0"
-            v-for="item in fetchedTemplateTest.latestFiveTransactions.slice(0, 5)" class="transaction-list-member">
+          <div v-if="dataDash!.latestTransactions?.length > 0"
+            v-for="item in dataDash?.latestTransactions.slice(0, 5)" class="transaction-list-member">
 
             <div class="transaction-main-info">
 
@@ -268,187 +276,34 @@
     </div>
 
   </div>
+
 </template>
 
 <script setup lang="ts">
-import { isEmpty } from '@nuxt/ui/runtime/utils/index.js';
-import type { FetchedTemplateTest } from '~/services/analytics/types';
 import { useUserStore } from '~/store/user';
 import { utcToZoned } from '~/utilis/timezoneUtilis/convertTimezone';
 import { formatCurrency } from '~/utilis/formaters/balanceFormater'
 import { VisXYContainer, VisLine } from '@unovis/vue'
-import { useElementSize } from '@vueuse/core'
 import { stringToColors } from '~/utilis/formaters/colorGetter';
 import { formatDateTime } from '~/utilis/formaters/dateTimeFormater';
 import { isNumber } from '@unovis/ts';
-import { da } from '@nuxt/ui/runtime/locale/index.js';
+import { apiRouter } from '~/services/serviceWrapper';
+import { getErrorMessage } from '~/utilis/getErrormessage';
+import AppLoading from '~/components/loading/AppLoading.vue';
 
 const userStore = useUserStore()
 console.log(userStore.userInfo)
 
-const fetchedTemplateTest: FetchedTemplateTest = {
-  staticDataTotalBalance: [{
-    totalBalance: 10000.58,
-    currency: 'EUR',
-    month: '2026-11'
-  }, {
-    totalBalance: 8000,
-    currency: 'EUR',
-    month: '2026-10'
-  }, {
-    totalBalance: 9500,
-    currency: 'EUR',
-    month: '2026-09'
-  }],
+const apiAnalytics = apiRouter.analyticsApi();
+const { data: dataDash, isLoading, isError, error, refetch } = apiAnalytics.fetchDashboardAnalytics();
 
-  staticDataTotalExpenses: [{
-    totalExpenses: 2560,
-    currency: 'EUR',
-    month: '2026-11'
-  }, {
-    totalExpenses: 1900,
-    currency: 'EUR',
-    month: '2026-10'
-  }, {
-    totalExpenses: 1800,
-    currency: 'EUR',
-    month: '2026-09'
-  }
-    , {
-    totalExpenses: 1800,
-    currency: 'EUR',
-    month: '2026-08'
-  }],
-  staticDataTotalIncome: [{
-    totalIncome: 3000,
-    currency: 'EUR',
-    month: '2026-11'
-  }, {
-    totalIncome: 2500,
-    currency: 'EUR',
-    month: '2026-10'
-  }, {
-    totalIncome: 2800,
-    currency: 'EUR',
-    month: '2026-09'
-  }, {
-    totalIncome: 2800,
-    currency: 'EUR',
-    month: '2026-08'
-  }],
-  totalBalanceByAccount: [{
-    accountName: 'Checking Account',
-    bankNumLast4: '1234',
-    totalBalance: 5000,
-    currency: 'EUR',
-    institution: 'Bank A',
-    id: "550e8400-e29b-41d4-a716-446655440000"
-  }, {
-    accountName: 'Savings Account',
-    bankNumLast4: '5678',
-    totalBalance: 3000,
-    currency: 'EUR',
-    institution: 'Bank B',
-    id: "7f3a9c21-8b64-4d02-ae51-93c7f0b82614"
-  }, {
-    accountName: 'Investment Account',
-    bankNumLast4: '9012',
-    totalBalance: 2000,
-    currency: 'EUR',
-    institution: 'Bank C',
-    id: "c2d8e5a7-1f43-49b6-8c90-5a2e71d4f603"
-  }],
-  latestFiveTransactions: [{
-    transactionName: 'Grocery Store',
-    dateTimeZone: '2026-11-15T10:30:00Z',
-    amount: 35.75,
-    currency: 'EUR',
-    categories: ['Groceries', 'Food'],
-    categoryKind: 'EXPENSE',
-    accountName: 'Checking Account'
-  },
-  {
-    transactionName: 'Salary Payment',
-    dateTimeZone: '2026-11-01T09:00:00Z',
-    amount: 2500.00,
-    currency: 'EUR',
-    categories: ['Income', 'Salary'],
-    categoryKind: 'INCOME',
-    accountName: 'Savings Account',
-  },
-  {
-    transactionName: 'Electricity Bill',
-    dateTimeZone: '2026-10-28T14:15:00Z',
-    amount: 75.20,
-    currency: 'EUR',
-    categories: ['Utilities', 'Electricity'],
-    categoryKind: 'EXPENSE',
-    accountName: 'Savings Account',
-  },
-  {
-    transactionName: 'Restaurant Dinner',
-    dateTimeZone: '2026-10-20T19:45:00Z',
-    amount: 60.50,
-    currency: 'EUR',
-    categories: ['Dining', 'Food'],
-    categoryKind: 'EXPENSE',
-    accountName: 'Savings Account',
-  },
-  {
-    transactionName: 'Online Shopping',
-    dateTimeZone: '2026-10-15T16:30:00Z',
-    amount: 120.99,
-    currency: 'EUR',
-    categories: ['Shopping', 'E-commerce'],
-    categoryKind: 'EXPENSE',
-    accountName: 'Savings Account',
-  }],
-  categoryAmountsIncome: [
-    {
-      categoryName: 'Salary',
-      categoryKind: 'INCOME',
-      amount: 2500
-    },
-    {
-      categoryName: 'Freelancing',
-      categoryKind: 'INCOME',
-      amount: 750
-    },
-    {
-      categoryName: 'Investments',
-      categoryKind: 'INCOME',
-      amount: 320
-    },
-    {
-      categoryName: 'Gifts',
-      categoryKind: 'INCOME',
-      amount: 150
-    }
-  ],
 
-  categoryAmountsExpense: [
-    {
-      categoryName: 'Food',
-      categoryKind: 'EXPENSE',
-      amount: 450
-    },
-    {
-      categoryName: 'Transportation',
-      categoryKind: 'EXPENSE',
-      amount: 120
-    },
-    {
-      categoryName: 'Rent',
-      categoryKind: 'EXPENSE',
-      amount: 800
-    },
-    {
-      categoryName: 'Entertainment',
-      categoryKind: 'EXPENSE',
-      amount: 180
-    }
-  ]
-}
+
+  const errorMessage = computed(() =>
+  error.value ? getErrorMessage(error.value) : ""
+);
+
+
 
 type ChartPoint = { x: number; y: number }
 
@@ -481,7 +336,7 @@ const getBalance = computed<{
   yData: number[];
   xData: Date[];
 }>(() => {
-  if (!fetchedTemplateTest.staticDataTotalBalance?.length) {
+  if (!dataDash.value?.totalBalanceMonthlyList?.length) {
     return {
       totalBalanceThisMonth: "No balance found.",
       changeComparedToLastMonth: "",
@@ -491,7 +346,7 @@ const getBalance = computed<{
     }
   }
 
-  let tempArray = fetchedTemplateTest.staticDataTotalBalance
+  let tempArray = dataDash.value.totalBalanceMonthlyList
 
   tempArray.sort((a, b) => {
     const a_month = new Date(`${a.month}-01T00:00:00`)
@@ -550,7 +405,7 @@ const getIncome = computed<{
   yData: number[];
   xData: Date[];
 }>(() => {
-  if (!fetchedTemplateTest.staticDataTotalIncome?.length) {
+  if (!dataDash.value?.monthlyIncomes?.length) {
     return {
       totalIncomeThisMonth: "No income found.",
       changeComparedToLastMonth: "",
@@ -560,7 +415,7 @@ const getIncome = computed<{
     }
   }
 
-  const tempArray = [...fetchedTemplateTest.staticDataTotalIncome]
+  const tempArray = [...dataDash.value.monthlyIncomes]
 
   tempArray.sort((a, b) => {
     const a_month = new Date(`${a.month}-01T00:00:00`)
@@ -615,7 +470,7 @@ const getExpenses = computed<{
   yData: number[];
   xData: Date[];
 }>(() => {
-  if (!fetchedTemplateTest.staticDataTotalExpenses?.length) {
+  if (!dataDash.value?.monthlyExpenses?.length) {
     return {
       totalExpensesThisMonth: "No expenses found.",
       changeComparedToLastMonth: "",
@@ -625,7 +480,7 @@ const getExpenses = computed<{
     }
   }
 
-  const tempArray = [...fetchedTemplateTest.staticDataTotalExpenses]
+  const tempArray = [...dataDash.value.monthlyExpenses]
 
   tempArray.sort((a, b) => {
     const a_month = new Date(`${a.month}-01T00:00:00`)
@@ -723,7 +578,7 @@ const revenueData = computed<DataProps[]>(() => {
 
 })
 
-const currency = computed(() => fetchedTemplateTest.staticDataTotalBalance[0]?.currency ?? 'EUR')
+const currency = computed(() => dataDash.value?.totalBalanceMonthlyList[0]?.currency ?? 'EUR')
 
 const chartOption = computed(() => ({
   grid: { left: 10, right: 10, top: 20, bottom: 40, containLabel: true },
@@ -780,12 +635,12 @@ type Account = {
 }
 
 const displayTop3Accs = computed<Account[]>(() => {
-  if (!fetchedTemplateTest.totalBalanceByAccount.length) {
+  if (!dataDash.value?.accountBalances.length) {
     return []
 
   }
 
-  const x = [...fetchedTemplateTest.totalBalanceByAccount]
+  const x = [...dataDash.value.accountBalances]
     .sort((a, b) => b.totalBalance - a.totalBalance)
     .slice(0, 3)
 
@@ -796,7 +651,7 @@ const displayTop3Accs = computed<Account[]>(() => {
 let optionPieChart1 = computed(() => {
 
   let sum = 0
-  const expenseData = fetchedTemplateTest.categoryAmountsExpense
+  const expenseData = dataDash.value?.categoryAmountsExpense
 
   expenseData?.forEach((x) => {
     sum = sum + x.amount
@@ -861,7 +716,7 @@ let optionPieChart1 = computed(() => {
 
 let optionPieChart2 = computed(() => {
   let sum = 0;
-  const expenseData = fetchedTemplateTest.categoryAmountsIncome
+  const expenseData = dataDash.value?.categoryAmountsIncome
   expenseData?.forEach((x) => {
     sum = sum + x.amount
   })
@@ -1555,6 +1410,28 @@ definePageMeta({
   margin-top: 2px;
 }
 
+.dashboard-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ui-error, #ef4444);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-error, #ef4444) 10%, transparent);
+}
+
+.dashboard-error-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ui-error, #ef4444);
+}
+
+.dashboard-error-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ui-text-muted, #6b7280);
+}
 
 @media (max-width: 768px) {
   .welcome-header {

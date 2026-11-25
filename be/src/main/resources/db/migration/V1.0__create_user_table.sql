@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS user_table (
                             password_hash character varying(256) not null,
                             has_finished_onboarding boolean not null default false,
                             has_verified_email boolean not null default false,
-                            last_logged_in timestampz
+                            last_logged_in timestamptz
 );

@@ -18,3 +18,9 @@ export interface AccountCreate {
     accountNumberMasked?: string;
     initialBalance?: number;
 }
+
+
+export interface FetchAccountsResponse{
+  entityList: AccountInformation[];
+  message: string
+}

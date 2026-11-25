@@ -17,7 +17,9 @@ import com.monetrax.monetrax.ai.repository.ApiKeysRepository;
 import com.monetrax.monetrax.ai.repository.MessageHistoryRepository;
 import com.monetrax.monetrax.ai.service.AiAPiService;
 import com.monetrax.monetrax.ai.service.impl.AiAPiServiceImpl;
+import com.monetrax.monetrax.alerts.dto.AlertInformation;
 import com.monetrax.monetrax.alerts.exceptions.InvalidInputException;
+import com.monetrax.monetrax.alerts.service.AlertService;
 import com.monetrax.monetrax.apis.dto.FrankfurterV2Response;
 import com.monetrax.monetrax.apis.service.FrankfurterApiService;
 import com.monetrax.monetrax.categories.dto.CategoryInformation;
@@ -81,8 +83,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final Validator validator;
     private final CategoryServiceImpl categoryService;
     private final FrankfurterApiService frankfurterApiService;
+    private final AlertService alertService;
 
-    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService, FrankfurterApiService frankfurterApiService) {
+    public TransactionServiceImpl(TransactionAdditionalInfoRepository transactionAdditionalInfoRepository, TransactionLineItemsRepository transactionLineItemsRepository, TransactionCategoriesRepository transactionCategoriesRepository, TransactionRepository transactionRepository, GlobalTransactionMapper globalTransactionMapper, CategoryRepository categoryRepository, CategoryMapper categoryMapper, AccountMapper accountMapper, AccountRepository accountRepository, UserRepository userRepository, TransactionRecurrenceRuleRepository transactionRecurrenceRuleRepository, ApiKeysRepository apiKeysRepository, MessageHistoryRepository messageHistoryRepository, AiAPiServiceImpl aiAPiService, AiComponent aiComponent, Validator validator, CategoryServiceImpl categoryService, FrankfurterApiService frankfurterApiService, AlertService alertService) {
         this.transactionAdditionalInfoRepository = transactionAdditionalInfoRepository;
         this.transactionLineItemsRepository = transactionLineItemsRepository;
         this.transactionCategoriesRepository = transactionCategoriesRepository;
@@ -103,6 +106,7 @@ public class TransactionServiceImpl implements TransactionService {
         this.validator = validator;
         this.categoryService = categoryService;
         this.frankfurterApiService = frankfurterApiService;
+        this.alertService = alertService;
     }
 
     @AllArgsConstructor
@@ -270,6 +274,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         List<CategoryInformation> categoryInformationList = categoryService.getAllCategories(userId).getCategories();
 
+        List<AlertInformation> alertInformations = alertService.getAccountAlerts(accountId, userId, true);
 
 
         AccountInformation accountInformation = accountMapper.fromAccountEntityToAccountInformation(account);
@@ -279,6 +284,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .transactions(informationParts)
                 .categoryInformationList(categoryInformationList)
                 .listOfProducts(listOfProducts)
+                .alerts(alertInformations)
                 .build();
 
 
@@ -317,7 +323,7 @@ public class TransactionServiceImpl implements TransactionService {
         //************************************************************************************************************************
         BigDecimal amountNative = transactionCreate.getAmount();
         BigDecimal conversionFactor;
-        if(account.getCurrency().equals(transactionCreate.getCurrency())) {
+        if(!account.getCurrency().equals(transactionCreate.getCurrency())) {
             LocalDate localDate = transactionCreate.getCustomCreationDate() == null ? LocalDate.now(ZoneOffset.UTC) : transactionCreate.getCustomCreationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDate();
             FrankfurterV2Response frankfurterV2Response = frankfurterApiService.getConversionFactor(transactionCreate.getCurrency(), account.getCurrency(), localDate);
             conversionFactor = BigDecimal.valueOf(frankfurterV2Response.getRate());

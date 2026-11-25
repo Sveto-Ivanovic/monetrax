@@ -4,10 +4,9 @@ import com.monetrax.monetrax.accounts.entity.AccountEntity;
 import com.monetrax.monetrax.categories.entity.CategoryKind;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -25,10 +24,12 @@ public class TransactionEntity {
     @Column(name = "transaction_id")
     private UUID transactionId;
 
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private UserEntity user;
 
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private AccountEntity account;
@@ -52,7 +53,8 @@ public class TransactionEntity {
     private String currency;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category_type", length = 50)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "category_type")
     private CategoryKind categoryType;
 
     @Column(name = "created_at")

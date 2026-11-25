@@ -3,6 +3,8 @@ package com.monetrax.monetrax.categories.entity;
 import com.monetrax.monetrax.user.entity.UserEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -26,6 +28,7 @@ public class CategoryEntity {
     private UserEntity user;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "category_type")
     private CategoryKind categoryType;
 

@@ -22,9 +22,9 @@ public class AlertConditionCreation {
     @NotNull
     private RuleType ruleType;
 
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
+    @DecimalMin(value = "0", message = "Amount must be greater than 0.")
     private BigDecimal limitValueLowOrEqual;
 
-    @DecimalMin(value = "0.01", message = "Amount must be greater than 0.")
+    @DecimalMin(value = "0", message = "Amount must be greater than 0.")
     private BigDecimal limitValueHigh;
 }

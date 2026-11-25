@@ -40,10 +40,10 @@ public class AlertEntity {
     private String description;
 
     @Column(name = "date_from")
-    private LocalDate dateFrom;
+    private OffsetDateTime dateFrom;
 
     @Column(name = "date_to")
-    private LocalDate dateTo;
+    private OffsetDateTime dateTo;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt;

@@ -9,11 +9,11 @@ export interface FetchedTemplateTest {
 }
 
 export interface FetchedDashboardAnalyticsData {
-    staticDataTotalBalance: MonthlyBalance[];
-    staticDataTotalExpenses: MonthlyExpenses[];
-    staticDataTotalIncome: MonthlyIncome[];
-    totalBalanceByAccount: AccountBalance[];
-    latestFiveTransactions: Transaction[];
+    totalBalanceMonthlyList: MonthlyBalance[];
+    monthlyExpenses: MonthlyExpenses[];
+    monthlyIncomes: MonthlyIncome[];
+    accountBalances: AccountBalance[];
+    latestTransactions: Transaction[];
     categoryAmountsIncome: CategoryAmounts[];
     categoryAmountsExpense: CategoryAmounts[];
 }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Builder
@@ -20,15 +21,15 @@ public class AlertCreate {
     @Size(min = 4, max = 50, message = "Size of the name must be between 4 and 50 characters.")
     private String name;
 
-    @Size(min = 15, max = 250, message = "Size of the name must be between 4 and 50 characters.")
+    @Size(min = 4, max = 250, message = "Size of the description must be between 4 and 250 characters.")
     private String description;
 
     @NotNull
-    private LocalDate dateFrom;
+    private OffsetDateTime dateFrom;
 
     @NotNull
     @Future(message = "The date to, must be in the future.")
-    private LocalDate dateTo;
+    private OffsetDateTime dateTo;
 
     @NotNull
     private List<AlertConditionCreation> filtersToCreate;

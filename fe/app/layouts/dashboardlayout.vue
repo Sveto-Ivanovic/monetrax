@@ -130,7 +130,7 @@ const selectedTimeZone = computed({
                 }
 
                     ">
-                    <UButton v-bind="userInformation" :label="userInformation.name"
+                    <UButton :label="userInformation.name"
                         :avatar="{ alt: userInformation.name }" trailing-icon="i-lucide-chevrons-up-down"
                         color="neutral" variant="ghost" square
                         class="w-full data-[state=open]:bg-elevated overflow-hidden" :ui="{
